@@ -5,7 +5,7 @@ schema so it can be sent directly to models that support tool use.
 """
 
 # ---------------------------------------------------------------------------
-# Built-in tool catalogue
+# Built-in tool catalog
 # ---------------------------------------------------------------------------
 
 BUILTIN_TOOLS = [

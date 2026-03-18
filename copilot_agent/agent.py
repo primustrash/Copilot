@@ -16,7 +16,14 @@ from copilot_agent.tools import get_tool_schemas
 
 
 def _exec_shell(command, working_dir=None):
-    """Execute a shell command and return stdout/stderr."""
+    """Execute a shell command and return stdout/stderr.
+
+    Note: This intentionally uses shell=True because the agent tool is
+    designed to run arbitrary user-approved shell commands. The agent loop
+    shows each command before execution so the user can interrupt.
+    """
+    if not isinstance(command, str) or not command.strip():
+        return "[error] Empty or invalid command."
     result = subprocess.run(
         command,
         shell=True,

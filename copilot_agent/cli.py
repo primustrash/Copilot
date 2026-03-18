@@ -64,7 +64,7 @@ def _prompt_choice(prompt_text, valid_range=None, allow_empty=False):
                 val = int(choice)
                 if val in valid_range:
                     return choice
-                print(f"  Please enter a number between {valid_range.start} and {valid_range.stop - 1}.")
+                print(f"  Please enter a number between {min(valid_range)} and {max(valid_range)}.")
             except ValueError:
                 if choice.lower() in ("q", "quit", "back"):
                     return choice
