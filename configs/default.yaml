@@ -1,0 +1,20 @@
+# Default configuration for Copilot Agent Launcher
+# --------------------------------------------------
+# Environment variable that holds your GitHub token:
+github_token_env: GITHUB_TOKEN
+
+# Pre-selected model (null = pick interactively):
+default_model: null
+
+# Pre-selected tools (empty = pick interactively):
+default_tools: []
+
+# Agent settings:
+agent:
+  mode: cli            # cli | cloud
+  max_iterations: 10   # max tool-call rounds per user message
+  temperature: 0.7     # model temperature (0.0 - 2.0)
+  system_prompt: >
+    You are a helpful coding assistant with access to tools.
+    Use the available tools to help the user accomplish their tasks.
+    Always explain what you are doing before calling a tool.
