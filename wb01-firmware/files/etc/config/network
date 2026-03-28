@@ -1,0 +1,53 @@
+config interface 'loopback'
+	option device 'lo'
+	option proto 'static'
+	option ipaddr '127.0.0.1'
+	option netmask '255.0.0.0'
+
+config globals 'globals'
+	option ula_prefix 'fd48:2a67:3d9d::/48'
+
+# LAN / Heimnetz-seitig
+config device
+	option name 'br-lan'
+	option type 'bridge'
+	list ports 'eth0'
+
+config interface 'lan'
+	option device 'br-lan'
+	option proto 'static'
+	option ipaddr '192.168.50.1'
+	option netmask '255.255.255.0'
+	option ip6assign '60'
+
+# WAN/Public-Uplink (optional): aktivieren, falls das Gerät eine öffentliche IP bezieht.
+# Auf WB01 kann WAN z.B. per WLAN-Uplink oder USB-Ethernet realisiert werden.
+config interface 'wan'
+	option proto 'dhcp'
+	option metric '10'
+
+config interface 'wan6'
+	option proto 'dhcpv6'
+
+# Gesicherter Tunnel zur Cloud
+config interface 'wg0'
+	option proto 'wireguard'
+	option private_key 'REPLACE_WITH_DEVICE_PRIVATE_KEY'
+	list addresses '10.99.0.2/24'
+	option mtu '1380'
+
+config wireguard_wg0
+	option description 'Cloud peer'
+	option public_key 'REPLACE_WITH_CLOUD_PUBLIC_KEY'
+	option endpoint_host 'vpn.example.com'
+	option endpoint_port '51820'
+	option persistent_keepalive '25'
+	list allowed_ips '10.99.0.0/24'
+	list allowed_ips '172.20.0.0/16'
+
+# Optional: feste Route zu Cloud-Subnetz via WAN (wenn kein WG-Default-Route genutzt wird)
+# config route
+# 	option interface 'wan'
+# 	option target '10.99.0.0'
+# 	option netmask '255.255.255.0'
+# 	option gateway '192.0.2.1'

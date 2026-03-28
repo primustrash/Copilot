@@ -1,0 +1,16 @@
+#!/bin/sh
+# Applied on first boot.
+
+# Disable unnecessary services by default.
+/etc/init.d/uhttpd enable
+/etc/init.d/firewall enable
+/etc/init.d/network enable
+/etc/init.d/dnsmasq enable
+
+# Ensure SSH host keys exist (dropbear will create if missing).
+[ -x /etc/init.d/dropbear ] && /etc/init.d/dropbear enable
+
+# Fail-closed default route: no WAN fallback route setup here.
+# Operator can add explicit fallback policies in LuCI if desired.
+
+exit 0
