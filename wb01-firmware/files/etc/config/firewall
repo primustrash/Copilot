@@ -1,0 +1,96 @@
+config defaults
+	option syn_flood '1'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+config zone
+	option name 'lan'
+	list network 'lan'
+	option input 'ACCEPT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+
+# Public uplink zone (optional): use with DHCP/PPPoE upstream.
+config zone
+	option name 'wan'
+	list network 'wan'
+	list network 'wan6'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option masq '1'
+	option mtu_fix '1'
+
+config zone
+	option name 'wgcloud'
+	list network 'wg0'
+	option input 'REJECT'
+	option output 'ACCEPT'
+	option forward 'REJECT'
+	option masq '0'
+	option mtu_fix '1'
+
+# Heimnetz darf nur über den Tunnel raus.
+config forwarding
+	option src 'lan'
+	option dest 'wgcloud'
+
+# Optional fallback (disabled by default): lan -> wan
+# config forwarding
+# 	option src 'lan'
+# 	option dest 'wan'
+
+# ===== Zugriffsliste: nur 4 bekannte Cloud-Server =====
+# Trage hier die echten Public-IP-Adressen deiner erlaubten Server ein.
+config ipset
+	option name 'trusted_cloud_servers'
+	option family 'ipv4'
+	option match 'src_net'
+	list entry '203.0.113.10'
+	list entry '203.0.113.11'
+	list entry '198.51.100.20'
+	list entry '198.51.100.21'
+
+# Nur bekannte Cloud-Server dürfen den WireGuard-Port erreichen.
+config rule
+	option name 'Allow-WireGuard-From-Trusted-Servers'
+	option src 'wan'
+	option proto 'udp'
+	option dest_port '51820'
+	option ipset 'trusted_cloud_servers'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Drop-WireGuard-From-Untrusted'
+	option src 'wan'
+	option proto 'udp'
+	option dest_port '51820'
+	option target 'DROP'
+
+# Cloud -> Heimnetz nur explizit für freigegebene Ziele.
+config rule
+	option name 'Allow-WG-to-WebUI-LAN'
+	option src 'wgcloud'
+	option dest 'lan'
+	option proto 'tcp'
+	option dest_ip '192.168.50.1'
+	option dest_port '443'
+	option target 'ACCEPT'
+
+# Beispiel: Nur erlaubte Server dürfen auf Printer-Service im Heimnetz.
+config rule
+	option name 'Allow-Trusted-WG-to-Printer'
+	option src 'wgcloud'
+	option dest 'lan'
+	option proto 'tcp'
+	option src_ip '10.99.0.10 10.99.0.11 10.99.0.12 10.99.0.13'
+	option dest_ip '192.168.50.20'
+	option dest_port '9100'
+	option target 'ACCEPT'
+
+config rule
+	option name 'Drop-Untrusted-WG-to-LAN'
+	option src 'wgcloud'
+	option dest 'lan'
+	option target 'DROP'
