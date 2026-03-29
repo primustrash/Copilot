@@ -1,37 +1,53 @@
-# Custom Firmware (WB01 / Creality Box) – Secure Cloud↔Heimnetz Bridge
+# Custom Firmware (WB01 / Creality Box) – Secure Cloud↔Heimnetz + USB Storage Connector
 
-Diese Vorlage erstellt eine **OpenWrt-basierte Firmware** für die WB01-Hardware
-(MT7688AN, 128 MB RAM/Flash), die als gehärtete Bridge zwischen Cloud-Server und Heimnetz betrieben wird.
+Diese Vorlage erstellt eine **OpenWrt-basierte Firmware** für WB01, die als:
 
-## Zielbild
+1. sicherer **Tunnel/Connector** zwischen Cloud und Heimnetz,
+2. optionaler **Lokal/Cloud-Speicher-Connector** über USB,
+3. zentral konfigurierbares Gateway per **LuCI-Weboberfläche**
 
-- Gerät verbindet sich als **WireGuard-Client** zu einem Cloud-Server.
-- Kann optional zusätzlich eine **öffentliche WAN-IP** nutzen.
-- Weiterleitung ist auf explizit erlaubte Ports/Netze begrenzt.
-- Nur bekannte Server dürfen zugreifen (Allowlist).
-- Vollständig über **LuCI-Weboberfläche** konfigurierbar.
+betrieben werden kann.
 
-## Sicherheitsprinzipien
+## Deine Anforderungen – so sind sie umgesetzt
 
-1. **Default-Deny Firewall**: Nichts wird ungefragt weitergeleitet.
-2. **Fail-Closed**: Bei Tunnel-Ausfall kein ungesicherter Fallback.
-3. **Server-Allowlist**: Nur exakt definierte Cloud-Server sind erlaubt.
-4. **WebUI nur über LAN/VPN**: Kein offener WAN-Adminzugang.
-5. **Minimale Angriffsfläche**: Nur benötigte Pakete + Dienste.
+- Nur bekannte Server dürfen zugreifen (Allowlist für 4 Public-IPs).
+- Bidirektionale Weiterleitung (Cloud↔Heim) nur mit expliziten Regeln.
+- USB-Speicher kann als gemeinsamer Ordner für LAN und Cloud genutzt werden.
+- Automatische Backups auf USB.
+- GUI-Optionen für:
+  - Tunnel/Connector-Modus,
+  - Storage-Connector,
+  - Cloud/LAN-IP-Mappings in beide Richtungen,
+  - Firmware/Software-Updates.
 
-## Zugriff nur für 4 bekannte Server (dein Wunsch)
+## Vorschläge zur Umsetzung (empfohlen)
 
-In `files/etc/config/firewall` sind Platzhalter hinterlegt:
+1. **Transport:** ausschließlich WireGuard (stabil + effizient auf MT7688).
+2. **Zugriffsschutz:** Allowlist + Default-Deny + Logging von Drops.
+3. **Storage:** ext4-formatierter USB-Stick, Mount auf `/mnt/usbshare`.
+4. **Freigabe:** Samba nur für `lan` + `wg0`, kein Gastzugang.
+5. **Backups:** tägliche Config-Backups via Cron auf USB.
+6. **Updates:** LuCI-App für attendedsysupgrade + kontrollierte Maintenance-Window.
+7. **Mapping:** pro Endgerät statische Cloud↔LAN-IP/Port-Zuordnungen mit Ein/Aus-Schalter.
 
-- `trusted_cloud_servers` (Public IPv4):
-  - `203.0.113.10`
-  - `203.0.113.11`
-  - `198.51.100.20`
-  - `198.51.100.21`
-- Erlaubt nur diese 4 Server auf UDP/51820 (WireGuard).
-- Alle anderen Quellen werden auf diesem Port geblockt.
+## Neue Weboberfläche: "WB01 Connector"
 
-Zusätzlich gibt es ein Beispiel für LAN-Zugriff aus dem Tunnel, ebenfalls auf 4 feste Quellen begrenzt (`10.99.0.10-13`).
+Es wird eine zusätzliche LuCI-App eingebunden (`luci-app-wb01-connector`) mit 4 Reitern:
+
+- **Tunnel / Connector**
+  - Betriebsmodus (Tunnel-only, Tunnel+Storage, Storage-only)
+  - Keepalive, MTU, ACL-Policy, Trusted Server
+- **Storage & Backup**
+  - USB-Mountpoint, Filesystem, Samba-Freigabe
+  - Cloud-Sync Toggle
+  - Backup-Intervall, Zielpfad, Retention
+- **Cloud/LAN Mapping**
+  - Lokale IP + Port ↔ Cloud-IP + Port
+  - Richtung: LAN→Cloud, Cloud→LAN, bidirektional
+- **Updates**
+  - Auto-Paketupdates
+  - Maintenance-Fenster
+  - Firmware-Upgrade via GUI
 
 ## Schnellstart
 
@@ -46,29 +62,20 @@ Zusätzlich gibt es ein Beispiel für LAN-Zugriff aus dem Tunnel, ebenfalls auf 
    ```bash
    ./scripts/build_wb01.sh
    ```
-3. Ergebnis liegt in `openwrt/bin/targets/ramips/mt76x8/`.
-4. Flashen per OpenWrt-`sysupgrade` (passendes Imageformat prüfen).
+3. Ergebnis: `openwrt/bin/targets/ramips/mt76x8/`
+4. Flashen via `sysupgrade` (im Testnetz validieren).
 
-## Cloud↔Heim und Heim↔Cloud synchron weiterleiten
+## Wichtige Platzhalter vor produktivem Einsatz
 
-- **Heim -> Cloud**: Forwarding `lan -> wgcloud` ist aktiv.
-- **Cloud -> Heim**: Nur mit expliziten Regeln (z.B. Drucker-Port 9100 oder Management 443).
-- Für weitere Dienste einfach zusätzliche, enge Firewall-Regeln anlegen.
-- Empfohlen: Nur notwendige Ports und nur feste Quell-IP-Adressen erlauben.
+- WireGuard Keys/Endpoint in `files/etc/config/network`
+- Erlaubte 4 Server-IP-Adressen in `files/etc/config/firewall`
+- USB-UUID in `files/etc/config/fstab`
+- Samba Benutzer/Passwort setzen (kein Gastbetrieb)
 
-## Weboberfläche (LuCI)
+## Hinweis
 
-Nach dem Flash:
+Die WB01-Hardware ist ressourcenbegrenzt (580 MHz / 128 MB RAM). Für maximale Stabilität:
 
-- LuCI: `https://<WB01-IP>/`
-- Relevante Menüs:
-  - Network → Interfaces (WAN/WG)
-  - Network → Firewall (Rules/Traffic Rules)
-  - VPN → WireGuard
-  - System → Startup / Reboot / Software
-
-## Wichtig
-
-- Vor Produktivbetrieb in Testumgebung prüfen.
-- Ersetze alle Platzhalter-Schlüssel/IPs durch echte Werte.
-- Für hohe Stabilität: externes Monitoring, USV, Backup-Config, staged Rollouts.
+- nur notwendige Dienste aktivieren,
+- Logs auf begrenzte Größe halten,
+- große Sync-Jobs zeitgesteuert außerhalb Peak-Zeiten ausführen.

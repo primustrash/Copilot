@@ -17,6 +17,11 @@ cd "${WORK_DIR}"
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 
+# Inject custom LuCI app/package for WB01 connector UI
+mkdir -p package/wb01
+rm -rf package/wb01/luci-app-wb01-connector
+cp -a "${ROOT_DIR}/custom-packages/luci-app-wb01-connector" package/wb01/
+
 cat > .config <<CFG
 CONFIG_TARGET_${TARGET}=y
 CONFIG_TARGET_${TARGET}_${SUBTARGET}=y
@@ -28,6 +33,9 @@ CONFIG_PACKAGE_luci-app-wireguard=y
 CONFIG_PACKAGE_luci-app-sqm=y
 CONFIG_PACKAGE_luci-app-ddns=y
 CONFIG_PACKAGE_luci-app-watchcat=y
+CONFIG_PACKAGE_luci-app-samba4=y
+CONFIG_PACKAGE_luci-app-attendedsysupgrade=y
+CONFIG_PACKAGE_luci-app-wb01-connector=y
 CONFIG_PACKAGE_wireguard-tools=y
 CONFIG_PACKAGE_kmod-wireguard=y
 CONFIG_PACKAGE_ca-bundle=y
@@ -38,9 +46,13 @@ CONFIG_PACKAGE_nftables=y
 CONFIG_PACKAGE_iptables-nft=y
 CONFIG_PACKAGE_kmod-usb2=y
 CONFIG_PACKAGE_kmod-usb-ohci=y
+CONFIG_PACKAGE_kmod-usb-storage=y
 CONFIG_PACKAGE_kmod-usb-printer=y
 CONFIG_PACKAGE_kmod-fs-ext4=y
 CONFIG_PACKAGE_block-mount=y
+CONFIG_PACKAGE_samba4-server=y
+CONFIG_PACKAGE_wsdd2=y
+CONFIG_PACKAGE_attendedsysupgrade-common=y
 CONFIG_PACKAGE_urngd=y
 CFG
 

@@ -1,0 +1,19 @@
+{
+  "luci-app-wb01-connector": {
+    "description": "Grant access to WB01 connector UCI and helper scripts",
+    "read": {
+      "uci": ["wb01-connector", "network", "firewall", "fstab", "samba4", "attendedsysupgrade"],
+      "file": {
+        "/usr/libexec/wb01": ["list"]
+      }
+    },
+    "write": {
+      "uci": ["wb01-connector", "network", "firewall", "fstab", "samba4", "attendedsysupgrade"],
+      "file": {
+        "/usr/libexec/wb01/run-update.sh": ["exec"],
+        "/usr/libexec/wb01/run-backup.sh": ["exec"],
+        "/usr/libexec/wb01/apply-mappings.sh": ["exec"]
+      }
+    }
+  }
+}
