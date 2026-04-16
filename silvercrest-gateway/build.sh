@@ -55,7 +55,7 @@ while [[ $# -gt 0 ]]; do
         --skip-docker) SKIP_DOCKER=1 ;;
         --output|-o)   shift; OUTPUT_DIR="$1" ;;
         -h|--help)
-            grep '^#' "$0" | sed 's/^# \{0,1\}//' | sed -n '2,/^$/p'
+            sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -189,7 +189,7 @@ echo ""
 
 OK=0
 if [ -f "${OUTPUT_DIR}/fullflash.bin" ]; then
-    SZ=$(ls -lh "${OUTPUT_DIR}/fullflash.bin" | awk '{print $5}')
+    SZ=$(du -h "${OUTPUT_DIR}/fullflash.bin" | cut -f1)
     MD=$(md5sum "${OUTPUT_DIR}/fullflash.bin" | awk '{print $1}')
     echo "  ✓ fullflash.bin         ${SZ}  md5: ${MD}"
     OK=1
@@ -198,7 +198,7 @@ else
 fi
 
 if [ -f "${OUTPUT_DIR}/ncp-uart-hw-7.5.1.gbl" ]; then
-    SZ=$(ls -lh "${OUTPUT_DIR}/ncp-uart-hw-7.5.1.gbl" | awk '{print $5}')
+    SZ=$(du -h "${OUTPUT_DIR}/ncp-uart-hw-7.5.1.gbl" | cut -f1)
     echo "  ✓ ncp-uart-hw-7.5.1.gbl  ${SZ}"
 fi
 

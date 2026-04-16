@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
         --output|-o)   shift; OUTPUT_DIR="$1" ;;
         -y)            UNATTENDED="-y" ;;
         -h|--help)
-            grep '^#' "$0" | sed 's/^# \{0,1\}//' | sed -n '2,/^$/p'
+            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -114,12 +114,9 @@ case "$MODE" in
         echo "║   Flash EFR32 Zigbee/Thread Radio Firmware                ║"
         echo "╚═══════════════════════════════════════════════════════════╝"
         echo ""
-        echo "  Radio mode selected: ${RADIO_MODE}"
         echo "  Gateway IP: ${GATEWAY_IP}"
         echo ""
         cd "$UPSTREAM_DIR"
-        # flash_efr32.sh is interactive (mode selection menu)
-        # pre-select using RADIO_MODE env var if the upstream script supports it
         bash flash_efr32.sh "$GATEWAY_IP"
         ;;
 
