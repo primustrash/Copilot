@@ -12,6 +12,13 @@ import json
 import threading
 import os
 import math
+import webbrowser
+import hashlib
+import base64
+import secrets
+import socket
+import urllib.parse
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 import calendar
@@ -205,6 +212,126 @@ class AccountFetcher:
         except Exception as e:
             result["error"] = str(e)
         return result
+
+
+# ============================================================
+# OAuth 2.0 PKCE Authentifizierung
+# ============================================================
+
+_OAUTH_SUCCESS_HTML = (
+    b"<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;"
+    b"padding-top:80px;background:#12122a;color:#e8e8ff'>"
+    b"<h2 style='color:#00c896'>&#10003; Authentifizierung erfolgreich!</h2>"
+    b"<p>Du kannst dieses Fenster jetzt schlie&szlig;en und zur App zur&uuml;ckkehren.</p>"
+    b"</body></html>"
+)
+
+_OAUTH_ERROR_HTML = (
+    b"<!DOCTYPE html><html><body style='font-family:sans-serif;text-align:center;"
+    b"padding-top:80px;background:#12122a;color:#e74c3c'>"
+    b"<h2>Fehler bei der Authentifizierung</h2>"
+    b"<p>Bitte schlie&szlig;e dieses Fenster und versuche es erneut.</p>"
+    b"</body></html>"
+)
+
+
+class OAuthFlow:
+    """OAuth 2.0 PKCE flow for OpenAI / Auth0 authentication."""
+
+    AUTH_URL  = "https://auth.openai.com/authorize"
+    TOKEN_URL = "https://auth.openai.com/oauth/token"
+    SCOPES    = "openid profile email"
+
+    def __init__(self, client_id: str):
+        self.client_id = client_id
+        # PKCE
+        self._verifier  = secrets.token_urlsafe(64)
+        digest          = hashlib.sha256(self._verifier.encode()).digest()
+        self._challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+        self._state     = secrets.token_urlsafe(16)
+        self._port      = self._free_port()
+        self.redirect_uri = f"http://localhost:{self._port}/callback"
+
+    # ── helpers ──────────────────────────────────────────────────
+    @staticmethod
+    def _free_port() -> int:
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0))  # bind only on loopback
+            return s.getsockname()[1]
+
+    @staticmethod
+    def decode_jwt_payload(token: str) -> dict:
+        """Decode JWT payload for display purposes only (no signature verification).
+        The access_token itself – validated server-side by the API – grants API access.
+        """
+        try:
+            part = token.split(".")[1]
+            part += "=" * (-len(part) % 4)
+            return json.loads(base64.urlsafe_b64decode(part))
+        except Exception:
+            return {}
+
+    # ── public API ───────────────────────────────────────────────
+    def auth_url(self) -> str:
+        params = urllib.parse.urlencode({
+            "response_type":         "code",
+            "client_id":             self.client_id,
+            "redirect_uri":          self.redirect_uri,
+            "scope":                 self.SCOPES,
+            "code_challenge":        self._challenge,
+            "code_challenge_method": "S256",
+            "state":                 self._state,
+        })
+        return f"{self.AUTH_URL}?{params}"
+
+    def exchange_code(self, code: str) -> dict:
+        r = requests.post(
+            self.TOKEN_URL,
+            data={
+                "grant_type":    "authorization_code",
+                "code":          code,
+                "redirect_uri":  self.redirect_uri,
+                "client_id":     self.client_id,
+                "code_verifier": self._verifier,
+            },
+            timeout=15,
+        )
+        r.raise_for_status()
+        return r.json()
+
+    def start_callback_server(self, on_result):
+        """Start a one-shot local HTTP server that captures the OAuth redirect."""
+        flow = self
+
+        class _Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                if "code" in qs:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(_OAUTH_SUCCESS_HTML)
+                    threading.Thread(
+                        target=lambda: on_result(qs["code"][0], None), daemon=True
+                    ).start()
+                else:
+                    error_parts = qs.get("error_description") or qs.get("error") or ["Unbekannter Fehler"]
+                    err = error_parts[0]
+                    self.send_response(400)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(_OAUTH_ERROR_HTML)
+                    threading.Thread(
+                        target=lambda: on_result(None, err), daemon=True
+                    ).start()
+
+            def log_message(self, *_):
+                pass  # suppress server log output
+
+        server = HTTPServer(("localhost", flow._port), _Handler)
+        server.timeout = 3 * 60  # 3-minute window for user to complete login
+        threading.Thread(target=server.handle_request, daemon=True).start()
+        return server
 
 
 # ============================================================
@@ -432,7 +559,7 @@ class AccountCard(ctk.CTkFrame):
 
 
 # ============================================================
-# Dialog: Konto hinzufügen
+# Dialog: Konto hinzufügen  (API-Key  oder  Browser-Login)
 # ============================================================
 
 class AddAccountDialog(ctk.CTkToplevel):
@@ -440,62 +567,213 @@ class AddAccountDialog(ctk.CTkToplevel):
         super().__init__(parent)
         self.on_add = on_add
         self.title("Konto hinzufügen")
-        self.geometry("460x320")
+        self.geometry("500x430")
         self.resizable(False, False)
         self.grab_set()
         self.configure(fg_color=C_BG)
+        self._oauth_flow: OAuthFlow | None = None
         self._build()
 
+    # ── Layout-Helfer ──────────────────────────────────────
+    def _lbl(self, parent, text, size=12, bold=False, color=C_SUBTEXT, **kw):
+        weight = "bold" if bold else "normal"
+        return ctk.CTkLabel(
+            parent, text=text, text_color=color,
+            font=ctk.CTkFont(family="Segoe UI", size=size, weight=weight), **kw
+        )
+
     def _build(self):
-        ctk.CTkLabel(
-            self, text="OpenAI-Konto hinzufügen",
-            font=ctk.CTkFont(family="Segoe UI", size=16, weight="bold"),
-            text_color=C_TEXT,
-        ).pack(pady=(20, 12))
+        self._lbl(
+            self, "OpenAI-Konto hinzufügen",
+            size=16, bold=True, color=C_TEXT,
+        ).pack(pady=(18, 8))
 
-        form = ctk.CTkFrame(self, fg_color="transparent")
-        form.pack(fill="x", padx=35)
+        tabs = ctk.CTkTabview(self, fg_color=C_CARD, segmented_button_fg_color=C_BORDER,
+                              segmented_button_selected_color=C_ACCENT,
+                              segmented_button_selected_hover_color="#5555cc",
+                              segmented_button_unselected_color=C_BORDER,
+                              segmented_button_unselected_hover_color=C_ACCENT)
+        tabs.pack(fill="both", expand=True, padx=22, pady=(0, 16))
 
-        ctk.CTkLabel(form, text="Anzeigename:", text_color=C_SUBTEXT).pack(anchor="w")
-        self._name = ctk.CTkEntry(form, placeholder_text="z. B. Mein Pro-Konto", height=36)
-        self._name.pack(fill="x", pady=(3, 10))
+        tabs.add("🔑  API-Key")
+        tabs.add("🌐  Browser-Login")
 
-        ctk.CTkLabel(form, text="API-Key (sk-…):", text_color=C_SUBTEXT).pack(anchor="w")
-        self._key = ctk.CTkEntry(form, placeholder_text="sk-…", height=36, show="•")
-        self._key.pack(fill="x", pady=(3, 6))
+        self._build_apikey_tab(tabs.tab("🔑  API-Key"))
+        self._build_oauth_tab(tabs.tab("🌐  Browser-Login"))
+
+    # ── Tab 1: API-Key ─────────────────────────────────────
+    def _build_apikey_tab(self, parent):
+        pad = {"padx": 18}
+
+        self._lbl(parent, "Anzeigename:").pack(anchor="w", pady=(14, 0), **pad)
+        self._name_key = ctk.CTkEntry(
+            parent, placeholder_text="z. B. Mein Pro-Konto", height=36)
+        self._name_key.pack(fill="x", pady=(3, 10), **pad)
+
+        self._lbl(parent, "API-Key  (sk-…):").pack(anchor="w", **pad)
+        self._key = ctk.CTkEntry(
+            parent, placeholder_text="sk-…", height=36, show="•")
+        self._key.pack(fill="x", pady=(3, 4), **pad)
 
         self._show_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(
-            form, text="API-Key anzeigen", variable=self._show_var,
-            command=self._toggle_show, text_color=C_SUBTEXT,
-            checkbox_width=18, checkbox_height=18,
-        ).pack(anchor="w", pady=(0, 10))
+            parent, text="API-Key anzeigen",
+            variable=self._show_var, command=self._toggle_show,
+            text_color=C_SUBTEXT, checkbox_width=18, checkbox_height=18,
+        ).pack(anchor="w", pady=(0, 6), **pad)
 
-        btns = ctk.CTkFrame(self, fg_color="transparent")
-        btns.pack(fill="x", padx=35, pady=(10, 0))
+        # Quick-link to OpenAI API keys page
+        link = ctk.CTkButton(
+            parent,
+            text="🔗  platform.openai.com/api-keys  ↗",
+            fg_color="transparent", hover_color=C_CARD2,
+            text_color=C_SUBTEXT, font=ctk.CTkFont(size=11),
+            anchor="w", height=22,
+            command=lambda: webbrowser.open("https://platform.openai.com/api-keys"),
+        )
+        link.pack(anchor="w", padx=14, pady=(0, 10))
 
+        btns = ctk.CTkFrame(parent, fg_color="transparent")
+        btns.pack(fill="x", padx=18, pady=(4, 14))
         ctk.CTkButton(btns, text="Abbrechen", fg_color=C_BORDER,
                       hover_color=C_ACCENT, command=self.destroy).pack(
             side="left", expand=True, fill="x", padx=(0, 6))
-
         ctk.CTkButton(btns, text="Hinzufügen", fg_color=C_ACCENT,
-                      hover_color="#5555cc", command=self._submit).pack(
+                      hover_color="#5555cc", command=self._submit_apikey).pack(
             side="right", expand=True, fill="x", padx=(6, 0))
 
     def _toggle_show(self):
         self._key.configure(show="" if self._show_var.get() else "•")
 
-    def _submit(self):
-        name = self._name.get().strip()
+    def _submit_apikey(self):
+        name = self._name_key.get().strip()
         key  = self._key.get().strip()
         if not name:
             messagebox.showerror("Fehler", "Bitte einen Anzeigenamen eingeben.", parent=self)
             return
         if not key.startswith("sk-"):
-            messagebox.showerror("Fehler", "Bitte einen gültigen API-Key eingeben (beginnt mit 'sk-').", parent=self)
+            messagebox.showerror(
+                "Fehler", "Bitte einen gültigen API-Key eingeben (beginnt mit 'sk-').",
+                parent=self,
+            )
             return
         self.on_add(name, key)
         self.destroy()
+
+    # ── Tab 2: Browser-Login (OAuth PKCE) ──────────────────
+    def _build_oauth_tab(self, parent):
+        pad = {"padx": 18}
+
+        self._lbl(parent, "Anzeigename  (optional, wird auto-befüllt):").pack(
+            anchor="w", pady=(14, 0), **pad)
+        self._name_oauth = ctk.CTkEntry(
+            parent, placeholder_text="z. B. Mein ChatGPT-Pro", height=36)
+        self._name_oauth.pack(fill="x", pady=(3, 10), **pad)
+
+        self._lbl(parent, "OAuth Client-ID:").pack(anchor="w", **pad)
+        self._client_id = ctk.CTkEntry(
+            parent, placeholder_text="Deine OAuth App Client-ID", height=36)
+        self._client_id.pack(fill="x", pady=(3, 4), **pad)
+
+        link = ctk.CTkButton(
+            parent,
+            text="🔗  OAuth App registrieren  ↗",
+            fg_color="transparent", hover_color=C_CARD2,
+            text_color=C_SUBTEXT, font=ctk.CTkFont(size=11),
+            anchor="w", height=22,
+            command=lambda: webbrowser.open(
+                "https://platform.openai.com/docs/authentication"
+            ),
+        )
+        link.pack(anchor="w", padx=14, pady=(0, 10))
+
+        self._oauth_status = self._lbl(
+            parent, "Bereit – Klicke auf  \"Im Browser verbinden\".",
+            size=11, color=C_SUBTEXT,
+        )
+        self._oauth_status.pack(anchor="w", pady=(0, 6), **pad)
+
+        btns = ctk.CTkFrame(parent, fg_color="transparent")
+        btns.pack(fill="x", padx=18, pady=(4, 14))
+        ctk.CTkButton(btns, text="Abbrechen", fg_color=C_BORDER,
+                      hover_color=C_ACCENT, command=self.destroy).pack(
+            side="left", expand=True, fill="x", padx=(0, 6))
+        self._oauth_btn = ctk.CTkButton(
+            btns, text="🌐  Im Browser verbinden",
+            fg_color=C_GREEN, hover_color="#00a87a", text_color="#000000",
+            font=ctk.CTkFont(weight="bold"),
+            command=self._start_oauth,
+        )
+        self._oauth_btn.pack(side="right", expand=True, fill="x", padx=(6, 0))
+
+    def _start_oauth(self):
+        client_id = self._client_id.get().strip()
+        if not client_id:
+            messagebox.showerror(
+                "Fehler",
+                "Bitte eine OAuth Client-ID eingeben.\n\n"
+                "Du kannst eine OAuth-App unter platform.openai.com/docs/authentication "
+                "registrieren.",
+                parent=self,
+            )
+            return
+
+        self._oauth_btn.configure(state="disabled", text="⟳  Warte …")
+        self._oauth_status.configure(
+            text="Öffne Browser … (Fenster nach Login automatisch schließen)",
+            text_color=C_YELLOW,
+        )
+
+        self._oauth_flow = OAuthFlow(client_id)
+        self._oauth_flow.start_callback_server(self._on_oauth_callback)
+        webbrowser.open(self._oauth_flow.auth_url())
+
+    def _on_oauth_callback(self, code: str | None, error: str | None):
+        """Called from the callback server thread – must schedule UI changes on main thread."""
+        if error:
+            self.after(0, lambda: self._oauth_failed(error))
+            return
+        # Exchange the code for tokens in the background
+        threading.Thread(
+            target=self._exchange_oauth_code, args=(code,), daemon=True
+        ).start()
+
+    def _exchange_oauth_code(self, code: str):
+        try:
+            tokens = self._oauth_flow.exchange_code(code)
+        except Exception as exc:
+            self.after(0, lambda: self._oauth_failed(str(exc)))
+            return
+
+        access_token = tokens.get("access_token", "")
+        id_token     = tokens.get("id_token", "")
+
+        # Try to extract display name from id_token JWT payload
+        display_name = self._name_oauth.get().strip()
+        if not display_name and id_token:
+            payload = OAuthFlow.decode_jwt_payload(id_token)
+            display_name = (
+                payload.get("name")
+                or payload.get("email")
+                or payload.get("sub", "OAuth-Konto")
+            )
+
+        if not display_name:
+            display_name = "OAuth-Konto"
+
+        self.after(0, lambda: self._oauth_success(display_name, access_token))
+
+    def _oauth_success(self, name: str, token: str):
+        self._oauth_status.configure(
+            text=f"✅  Verbunden als: {name}", text_color=C_GREEN)
+        self._oauth_btn.configure(state="normal", text="🌐  Im Browser verbinden")
+        self.on_add(name, token)
+        self.destroy()
+
+    def _oauth_failed(self, error: str):
+        self._oauth_status.configure(
+            text=f"⚠  Fehler: {error}", text_color=C_RED)
+        self._oauth_btn.configure(state="normal", text="🌐  Im Browser verbinden")
 
 
 # ============================================================
