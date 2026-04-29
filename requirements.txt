@@ -1,0 +1,4 @@
+# Abhängigkeiten für OpenAI Token Tracker
+customtkinter>=5.2.2
+requests>=2.31.0
+Pillow>=10.0.0
