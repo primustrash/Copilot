@@ -19,6 +19,14 @@ interface DynamicRecord {
 
 const dynamicNamespaces = new Map<string, Map<string, DynamicRecord>>();
 const latestRecordByNamespace = new Map<string, string>();
+let recordSequence = 0;
+
+const RUNNING_ACTION_PATTERN = /(create|start|launch|boot|execute|run|resume|wake|attach|promote|spawn|monitor|continue|supervise|broadcast|inject|queue|assign|add|enable|load|capture|branch)/;
+const PAUSED_ACTION_PATTERN = /(pause|sleep|freeze|block|interrupt)/;
+const STOPPED_ACTION_PATTERN = /(stop|cancel|abort|destroy|shutdown|remove|disable|close|archive)/;
+const COMPLETED_ACTION_PATTERN = /(complete|finalize|final_report|final_decision|prove|done)/;
+const UPDATED_ACTION_PATTERN = /(restore|recover|rollback|replan|retry|merge|patch|update|refine|expand|decompose|optimize|reload|switch|change|replace|rebalance|resolve|compress)/;
+const OBSERVED_ACTION_PATTERN = /(status|timeline|report|score|metrics|logs|result|validate|verify|detect|diff|compare|estimate|check|rank|vote|consensus|synthesize|prioritize|weight)/;
 
 const workflowToolNames = [
   'autonomy.goal_execute',
@@ -620,7 +628,7 @@ function extractRecordId(input: ToolInput): string | undefined {
 function createRecord(namespace: string, input: ToolInput, action: string): DynamicRecord {
   const now = new Date().toISOString();
   const record: DynamicRecord = {
-    id: extractRecordId(input) ?? `${sanitizeNamespace(namespace)}-${Date.now()}`,
+    id: extractRecordId(input) ?? `${sanitizeNamespace(namespace)}-${Date.now()}-${++recordSequence}`,
     namespace,
     status: inferStatus(action),
     payload: { ...input },
@@ -651,22 +659,22 @@ function getOrCreateRecord(namespace: string, input: ToolInput, action: string):
 }
 
 function inferStatus(action: string): string {
-  if (/(create|start|launch|boot|execute|run|resume|wake|attach|promote|spawn|monitor|continue|supervise|broadcast|inject|queue|assign|add|enable|load|capture|branch)/.test(action)) {
+  if (RUNNING_ACTION_PATTERN.test(action)) {
     return 'running';
   }
-  if (/(pause|sleep|freeze|block|interrupt)/.test(action)) {
+  if (PAUSED_ACTION_PATTERN.test(action)) {
     return 'paused';
   }
-  if (/(stop|cancel|abort|destroy|shutdown|remove|disable|close|archive)/.test(action)) {
+  if (STOPPED_ACTION_PATTERN.test(action)) {
     return 'stopped';
   }
-  if (/(complete|finalize|final_report|final_decision|prove|done)/.test(action)) {
+  if (COMPLETED_ACTION_PATTERN.test(action)) {
     return 'completed';
   }
-  if (/(restore|recover|rollback|replan|retry|merge|patch|update|refine|expand|decompose|optimize|reload|switch|change|replace|rebalance|resolve|compress)/.test(action)) {
+  if (UPDATED_ACTION_PATTERN.test(action)) {
     return 'updated';
   }
-  if (/(status|timeline|report|score|metrics|logs|result|validate|verify|detect|diff|compare|estimate|check|rank|vote|consensus|synthesize|prioritize|weight)/.test(action)) {
+  if (OBSERVED_ACTION_PATTERN.test(action)) {
     return 'observed';
   }
   return 'ready';
