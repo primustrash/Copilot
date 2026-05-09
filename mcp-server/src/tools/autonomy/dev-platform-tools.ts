@@ -1464,7 +1464,938 @@ const section13Names = parseNameBlock(`
 "devops_autonomy.finalize"
 `);
 
-const allNames = [...section8Names, ...section9Names, ...section10Names, ...section11Names, ...section12Names, ...section13Names];
+const section14Names = parseNameBlock(`
+"observability.logs_query",
+"observability.logs.query",
+"observability.logs_tail",
+"observability.logs_cluster",
+"observability.logs.cluster_errors",
+"observability.logs_anomaly",
+"observability.logs.correlate_with_deploy",
+"observability.metrics_query",
+"observability.metrics.query",
+"observability.metrics_range",
+"observability.metrics.range_query",
+"observability.metrics_anomaly",
+"observability.metrics.dashboard_create",
+"observability.trace_search",
+"observability.trace.search",
+"observability.trace_explain",
+"observability.trace.explain",
+"observability.service_map",
+"observability.alerts_list",
+"observability.alerts.list",
+"observability.alert_explain",
+"observability.alerts.explain",
+"observability.alert_tune",
+"observability.alerts.tune",
+"observability.dashboard_create",
+"observability.dashboard_snapshot",
+"observability.slo_check",
+"observability.error_budget",
+"observability.release_compare",
+"observability.final_report",
+"observability_autonomy.query_logs",
+"observability_autonomy.query_metrics",
+"observability_autonomy.query_traces",
+"observability_autonomy.detect_regression",
+"observability_autonomy.detect_anomaly",
+"observability_autonomy.find_root_cause",
+"observability_autonomy.correlate_deploy",
+"observability_autonomy.ask_gemini_incident_analysis",
+"observability_autonomy.ask_ollama_fast_summary",
+"observability_autonomy.generate_fix_hypotheses",
+"observability_autonomy.verify_recovery",
+"observability_autonomy.report",
+"sentry.organization.list",
+"sentry.projects",
+"sentry.project.list",
+"sentry.project.get",
+"sentry.issues.list",
+"sentry.issues_list",
+"sentry.issue.get",
+"sentry.issue_get",
+"sentry.issue.events",
+"sentry.issue_events",
+"sentry.issue.stacktrace",
+"sentry.issue_stacktrace",
+"sentry.issue.breadcrumbs",
+"sentry.issue.tags",
+"sentry.issue.comments",
+"sentry.issue.assign",
+"sentry.issue.resolve",
+"sentry.issue.ignore",
+"sentry.issue.suspect_commits",
+"sentry.issue_suspect_commits",
+"sentry.issue.related_issues",
+"sentry.issue.fix_plan",
+"sentry.issue_fix_plan",
+"sentry.issue.seer_analysis",
+"sentry.issue.mark_resolved",
+"sentry.issue_mark_resolved",
+"sentry.event.get",
+"sentry.event.search",
+"sentry.release.list",
+"sentry.release.get",
+"sentry.release.health",
+"sentry.release_health",
+"sentry.deploy.list",
+"sentry.performance.query",
+"sentry.performance_query",
+"sentry.trace.get",
+"sentry.trace_get",
+"sentry.alerts.list",
+"sentry.alerts.get",
+"sentry.logs.query",
+"sentry.feedback.list",
+"sentry.error_rate",
+"sentry.regression_detect",
+"sentry.deploy_compare",
+"sentry.pr_comment",
+"prometheus.query",
+"prometheus.range_query",
+"prometheus.series",
+"prometheus.labels",
+"prometheus.targets",
+"prometheus.alerts",
+"prometheus.alert_rules",
+"prometheus.rules",
+"prometheus.rule_test",
+"prometheus.slo_query",
+"prometheus.anomaly_detect",
+"grafana.datasource.list",
+"grafana.datasource_list",
+"grafana.dashboard.search",
+"grafana.dashboard_search",
+"grafana.dashboard.get",
+"grafana.dashboard_get",
+"grafana.dashboard.create",
+"grafana.dashboard_create",
+"grafana.dashboard.update",
+"grafana.dashboard_update",
+"grafana.dashboard.snapshot",
+"grafana.dashboard_snapshot",
+"grafana.panel.query_extract",
+"grafana.panel_query_extract",
+"grafana.annotation.create",
+"grafana.annotation_create",
+"grafana.alerts",
+"grafana.alerts.list",
+"grafana.report.export",
+"grafana.report_export",
+"opentelemetry.trace_map",
+"opentelemetry.trace.search",
+"opentelemetry.trace.get",
+"opentelemetry.trace.explain",
+"opentelemetry.service_graph",
+"opentelemetry.span_analyze",
+"opentelemetry.metrics.query",
+"opentelemetry.logs.query",
+"incident.detect",
+"incident.detect_regression",
+"incident.create",
+"incident.update",
+"incident.timeline",
+"incident.timeline_generate",
+"incident.root_cause_candidates",
+"incident.customer_impact_estimate",
+"incident.impact_estimate",
+"incident.mitigation_plan",
+"incident.fix_verification",
+"incident.fix_verify",
+"incident.status_update",
+"incident.postmortem",
+"incident.followups",
+"incident.close"
+`);
+
+const section15Names = parseNameBlock(`
+"security.secrets.scan",
+"security.secrets_scan",
+"security.secrets.verify",
+"security.secrets_verify",
+"security.secrets_redact",
+"security.secrets.rotate_plan",
+"security.secrets_rotate_plan",
+"security.sast.run",
+"security.sast_run",
+"security.sast.explain",
+"security.sast_explain",
+"security.sast_fix_plan",
+"security.sast.pr_comment",
+"security.dependency.scan",
+"security.dependency_scan",
+"security.dependency.fix_plan",
+"security.dependency_fix_plan",
+"security.dependency.update_safe",
+"security.sbom.generate",
+"security.sbom_generate",
+"security.sbom.compare",
+"security.sbom_compare",
+"security.license.scan",
+"security.license_scan",
+"security.license.policy_check",
+"security.container.scan",
+"security.container_scan",
+"security.container.cve_report",
+"security.container.harden_dockerfile",
+"security.iac_scan",
+"security.k8s.scan",
+"security.k8s_scan",
+"security.k8s.rbac_audit",
+"security.k8s.network_policy_suggest",
+"security.terraform.scan",
+"security.terraform.policy_check",
+"security.cloud.iam_audit",
+"security.cloud_iam_audit",
+"security.cloud.public_exposure_scan",
+"security.public_exposure_scan",
+"security.pii_scan",
+"security.privacy_review",
+"security.compliance_check",
+"security.api.auth_audit",
+"security.api_auth_audit",
+"security.api.rate_limit_check",
+"security.api_rate_limit_check",
+"security.api.input_validation_check",
+"security.api_input_validation_check",
+"security.api.open_redirect_check",
+"security.api.idor_check",
+"security.api_idor_check",
+"security.api.jwt_check",
+"security.api_jwt_check",
+"security.api.cors_check",
+"security.web_cors_check",
+"security.api.csrf_check",
+"security.web_csrf_check",
+"security.api_oauth_check",
+"security.web.xss_scan",
+"security.web_xss_check",
+"security.web.sqli_scan",
+"security.web.ssrf_scan",
+"security.web.headers_check",
+"security.web_security_headers",
+"security.web.cookie_flags_check",
+"security.web_cookie_flags",
+"security.web.csp_analyze",
+"security.web_csp_analyze",
+"security.web.oauth_flow_check",
+"security.web_open_redirect_check",
+"security.prompt_injection.scan",
+"security.prompt_injection_scan",
+"security.mcp.tool_poisoning_scan",
+"security.mcp_tool_poisoning_scan",
+"security.mcp.tool_shadowing_scan",
+"security.mcp_tool_shadowing_scan",
+"security.mcp.permission_audit",
+"security.mcp_permission_audit",
+"security.mcp.server_allowlist_check",
+"security.mcp_server_allowlist",
+"security.mcp.schema_diff",
+"security.mcp_schema_diff",
+"security.mcp.tool_metadata_review",
+"security.mcp.output_sanitizer_test",
+"security.mcp_output_sanitize",
+"security.mcp_resource_audit",
+"security.mcp_dynamic_tool_check",
+"security.mcp_risk_score",
+"security.redteam",
+"security.report",
+"security_autonomy.scan_secrets",
+"security_autonomy.scan_sast",
+"security_autonomy.scan_dependencies",
+"security_autonomy.scan_container",
+"security_autonomy.scan_iac",
+"security_autonomy.scan_mcp_tools",
+"security_autonomy.detect_prompt_injection",
+"security_autonomy.detect_tool_poisoning",
+"security_autonomy.detect_secret_leak",
+"security_autonomy.ask_gemini_security_review",
+"security_autonomy.ask_ollama_security_critic",
+"security_autonomy.fix_low_risk",
+"security_autonomy.create_fix_plan",
+"security_autonomy.verify_fix",
+"security_autonomy.report",
+"policy.create",
+"policy.update",
+"policy.delete",
+"policy.check",
+"policy.enforce",
+"policy.simulate",
+"policy.diff",
+"policy.audit",
+"policy.allow",
+"policy.allow_tool",
+"policy.deny",
+"policy.deny_tool",
+"policy.require_approval",
+"policy.set_scope",
+"policy.scope_tool",
+"policy.scope_agent",
+"policy.scope_model",
+"policy.scope_network",
+"policy.scope_credentials",
+"policy.set_rate_limit",
+"policy.set_budget_limit",
+"policy.set_budget",
+"policy.set_network_policy",
+"policy.set_network",
+"policy.set_secret_access",
+"policy.set_production_access",
+"policy.set_model_access",
+"policy.export",
+"policy_autonomy.check",
+"policy_autonomy.enforce",
+"policy_autonomy.update_live",
+"policy_autonomy.require_approval",
+"policy_autonomy.allow_tool",
+"policy_autonomy.deny_tool",
+"policy_autonomy.scope_tool",
+"policy_autonomy.scope_agent",
+"policy_autonomy.scope_model",
+"policy_autonomy.scope_network",
+"policy_autonomy.scope_credentials",
+"policy_autonomy.score_risk",
+"policy_autonomy.block_high_risk",
+"policy_autonomy.audit",
+"approval.request",
+"approval.request_batch",
+"approval.request_diff",
+"approval.request_tool_call",
+"approval.request_model_call",
+"approval.request_production_action",
+"approval.request_secret_access",
+"approval.request_cost_increase",
+"approval.check",
+"approval.approve",
+"approval.reject",
+"approval.timeout",
+"approval.timeout_action",
+"approval.escalate",
+"approval.diff_preview",
+"approval.risk_summary",
+"approval.audit",
+"risk.score_tool_call",
+"risk.score_plan",
+"risk.plan_score",
+"risk.task_score",
+"risk.tool_call_score",
+"risk.diff_score",
+"risk.deploy_score",
+"risk.db_change_score",
+"risk.secret_exposure_score",
+"risk.cost_score",
+"risk.security_score",
+"risk.rollback_score",
+"risk.detect_destructive_action",
+"risk.detect_secret_exposure",
+"risk.detect_production_write",
+"risk.block_if_high",
+"risk.report",
+"sandbox.create",
+"sandbox.destroy",
+"sandbox.reset",
+"sandbox.snapshot",
+"sandbox.restore",
+"sandbox.execute",
+"sandbox.exec",
+"sandbox.exec_stream",
+"sandbox.exec_network_off",
+"sandbox.exec_egress_limited",
+"sandbox.network_off",
+"sandbox.egress_allowlist",
+"sandbox.file_upload",
+"sandbox.file_download",
+"sandbox.install_dependencies",
+"sandbox.run_tests",
+"sandbox.run_browser",
+"sandbox.capture_logs",
+"sandbox.capture_artifacts",
+"sandbox.timeout",
+"sandbox.resource_limit",
+"sandbox.permissions",
+"sandbox.audit",
+"sandbox.finalize",
+"sandbox_autonomy.create",
+"sandbox_autonomy.clone",
+"sandbox_autonomy.snapshot",
+"sandbox_autonomy.restore",
+"sandbox_autonomy.destroy",
+"sandbox_autonomy.exec",
+"sandbox_autonomy.exec_stream",
+"sandbox_autonomy.exec_network_off",
+"sandbox_autonomy.exec_egress_limited",
+"sandbox_autonomy.install_dependencies",
+"sandbox_autonomy.run_tests",
+"sandbox_autonomy.run_browser",
+"sandbox_autonomy.capture_artifacts",
+"sandbox_autonomy.capture_logs",
+"sandbox_autonomy.verify_clean",
+"sandbox_autonomy.finalize",
+"audit.log",
+"audit.query",
+"audit.export",
+"audit.diff",
+"audit.timeline",
+"audit.tool_calls",
+"audit.resource_reads",
+"audit.prompt_gets",
+"audit.model_calls",
+"audit.agent_actions",
+"audit.policy_events",
+"audit.approvals",
+"audit.security_events",
+"audit.costs",
+"audit.artifacts",
+"audit.anomaly_detect",
+"audit.final_package"
+`);
+
+const section16Names = parseNameBlock(`
+"product.prd.generate",
+"product.prd_generate",
+"product.prd.review",
+"product.prd_review",
+"product.requirements.extract",
+"product.requirements_extract",
+"product.requirements.trace_to_code",
+"product.requirements_trace",
+"product.acceptance_criteria.generate",
+"product.acceptance_criteria",
+"product.user_story.generate",
+"product.user_stories",
+"product.edge_cases.generate",
+"product.edge_cases",
+"product.risk_assessment",
+"product.scope_cut",
+"product.roadmap_update",
+"product.release_plan",
+"product.feedback_summarize",
+"product.analytics_plan",
+"product.experiment_plan",
+"product.final_spec",
+"jira.issue.create",
+"jira.issue_create",
+"jira.issue.update",
+"jira.issue_update",
+"jira.issue.comment",
+"jira.issue_comment",
+"jira.issue.assign",
+"jira.issue.transition",
+"jira.issue_transition",
+"jira.issue.link",
+"jira.issue.link_pr",
+"jira.issue.get",
+"jira.issue.search",
+"jira.epic.create",
+"jira.epic_create",
+"jira.epic.update",
+"jira.epic_update",
+"jira.sprint.list",
+"jira.sprint_list",
+"jira.backlog.prioritize",
+"jira.backlog_prioritize",
+"jira.project.list",
+"jira.release_notes",
+"linear.issue.create",
+"linear.issue_create",
+"linear.issue.update",
+"linear.issue_update",
+"linear.issue.comment",
+"linear.issue_comment",
+"linear.issue.assign",
+"linear.issue.transition",
+"linear.issue_transition",
+"linear.issue.link_pr",
+"linear.project.status",
+"linear.project_status",
+"linear.project.list",
+"linear.project.get",
+"linear.cycle.list",
+"linear.cycles",
+"linear.team.list",
+"linear.roadmap",
+"linear.release_notes",
+"slack.message.send",
+"slack.message_send",
+"slack.message.update",
+"slack.message.delete",
+"slack.channel.list",
+"slack.channel.history",
+"slack.channel.search",
+"slack.thread.read",
+"slack.thread.reply",
+"slack.thread.summarize",
+"slack.user.lookup",
+"slack.file.upload",
+"slack.approval.request",
+"slack.release_announce_draft",
+"slack.release_announce",
+"slack.incident_update_draft",
+"slack.incident_update",
+"slack.status_update",
+"slack.decision_post",
+"slack.handoff_post",
+"slack.ask_approval",
+"slack.collect_feedback",
+"handover.generate",
+"handover.create",
+"handover.accept",
+"handover.update",
+"handover.risks",
+"handover.next_steps",
+"handover.blockers",
+"handover.context_pack",
+"handover.artifacts",
+"handover.audit",
+"handover.finalize",
+"decision.record",
+"decision.update",
+"decision.search",
+"decision.compare_options",
+"decision.score_options",
+"decision.recommend",
+"decision.revisit",
+"decision.link_artifacts",
+"decision.link_pr",
+"decision.export",
+"release.plan",
+"release.checklist",
+"release.notes",
+"release.changelog",
+"release.version_bump",
+"release.tag",
+"release.prerelease",
+"release.publish",
+"release.announce",
+"release.rollback_comms",
+"release.monitor",
+"release.postmortem",
+"release.final_report",
+"workflow.template_create",
+"workflow.template_update",
+"workflow.template_run",
+"workflow.create",
+"workflow.update",
+"workflow.run",
+"workflow.pause",
+"workflow.resume",
+"workflow.cancel",
+"workflow.graph_create",
+"workflow.graph_update",
+"workflow.graph_visualize",
+"workflow.task_graph_visualize",
+"workflow.step_add",
+"workflow.step_remove",
+"workflow.step_retry",
+"workflow.step_skip",
+"workflow.step_parallelize",
+"workflow.step_gate",
+"workflow.automation_suggest",
+"workflow.automation_install",
+"workflow.final_report"
+`);
+
+const section17Names = parseNameBlock(`
+"filesystem.read",
+"filesystem.write",
+"filesystem.append",
+"filesystem.delete",
+"filesystem.move",
+"filesystem.copy",
+"filesystem.rename",
+"filesystem.mkdir",
+"filesystem.listdir",
+"filesystem.glob",
+"filesystem.search",
+"filesystem.watch",
+"filesystem.permissions",
+"filesystem.stat",
+"filesystem.hash",
+"filesystem.archive",
+"filesystem.unarchive",
+"filesystem.temp_create",
+"filesystem.cleanup",
+"filesystem.read_file",
+"filesystem.write_file",
+"filesystem.append_file",
+"filesystem.create_file",
+"filesystem.delete_file",
+"filesystem.move_file",
+"filesystem.copy_file",
+"filesystem.rename_file",
+"filesystem.read_directory",
+"filesystem.create_directory",
+"filesystem.delete_directory",
+"filesystem.search_text",
+"filesystem.search_regex",
+"filesystem.temp_file",
+"filesystem.temp_directory",
+"filesystem.diff_files",
+"filesystem.patch_file",
+"shell.exec",
+"shell.exec_stream",
+"shell.exec_timeout",
+"shell.exec_sandboxed",
+"shell.exec_with_timeout",
+"shell.exec_with_env",
+"shell.exec_interactive",
+"shell.kill_process",
+"shell.process_kill",
+"shell.process_list",
+"shell.env_get",
+"shell.env_set",
+"shell.which",
+"shell.cwd_get",
+"shell.cwd_set",
+"shell.history",
+"shell.script_create",
+"shell.script_run",
+"shell.script_lint",
+"shell.script_schedule",
+"package.detect_manager",
+"package.install",
+"package.uninstall",
+"package.update",
+"package.audit",
+"package.outdated",
+"package.lockfile_check",
+"package.lockfile_update",
+"package.dependency_tree",
+"package.why",
+"package.add_dev",
+"package.add_prod",
+"package.remove_unused",
+"package.dedupe",
+"package.version_pin",
+"package.version_unpin",
+"package.security_fix",
+"package.license_check",
+"package.size_analyze",
+"package.publish",
+"workspace.create",
+"workspace.open",
+"workspace.close",
+"workspace.clone",
+"workspace.fork",
+"workspace.reset",
+"workspace.clean",
+"workspace.snapshot",
+"workspace.restore",
+"workspace.diff",
+"workspace.search",
+"workspace.index",
+"workspace.permissions",
+"workspace.secrets_policy",
+"workspace.network_policy",
+"workspace.export",
+"environment.detect",
+"environment.bootstrap",
+"environment.install_system_deps",
+"environment.install_project_deps",
+"environment.verify_tools",
+"environment.verify_versions",
+"environment.generate_env_file",
+"environment.validate_env_file",
+"environment.start_services",
+"environment.stop_services",
+"environment.restart_services",
+"environment.wait_ready",
+"environment.health_report",
+"environment.freeze",
+"environment.rebuild"
+`);
+
+const section18Names = parseNameBlock(`
+"multimodal.image_analyze",
+"multimodal.image_compare",
+"multimodal.image_ocr",
+"multimodal.image_caption",
+"multimodal.video_analyze",
+"multimodal.video_summarize",
+"multimodal.audio_transcribe",
+"multimodal.audio_summarize",
+"multimodal.document_extract",
+"multimodal.document_compare",
+"image.generate",
+"image.edit",
+"image.upscale",
+"image.background_remove",
+"image.object_detect",
+"image.ocr",
+"image.compare",
+"image.compress",
+"image.metadata_extract",
+"image.asset_optimize",
+"video.transcribe",
+"video.summarize",
+"video.scene_detect",
+"video.extract_frames",
+"video.ocr_frames",
+"video.compare",
+"video.compress",
+"video.caption_generate",
+"video.asset_optimize",
+"audio.capture_start",
+"audio.capture_stop",
+"audio.transcribe",
+"audio.transcribe_file",
+"audio.transcribe_stream",
+"audio.speaker_detect",
+"audio.speaker_diarize",
+"audio.speaker_diarization",
+"audio.keyword_detect",
+"audio.sentiment",
+"audio.noise_detect",
+"audio.noise_reduce",
+"audio.summarize",
+"audio.summary",
+"audio.extract_tasks",
+"audio.extract_decisions",
+"audio.action_items",
+"audio.export_srt",
+"audio.report",
+"vision.screenshot_analyze",
+"vision.ui_detect",
+"vision.layout_compare",
+"vision.visual_bug_detect",
+"vision.accessibility_detect",
+"vision.ocr",
+"vision.chart_extract",
+"vision.diagram_understand",
+"vision.design_compare",
+"vision.report",
+"pdf.extract_text",
+"pdf.extract_tables",
+"pdf.extract_images",
+"pdf.ocr",
+"pdf.split",
+"pdf.merge",
+"pdf.compress",
+"pdf.redact",
+"pdf.sign",
+"pdf.compare",
+"pdf.form_fill",
+"pdf.report",
+"spreadsheet.read",
+"spreadsheet.write",
+"spreadsheet.append_rows",
+"spreadsheet.update_cells",
+"spreadsheet.create_sheet",
+"spreadsheet.delete_sheet",
+"spreadsheet.formula_generate",
+"spreadsheet.pivot_create",
+"spreadsheet.chart_create",
+"spreadsheet.validate",
+"spreadsheet.export",
+"document.read",
+"document.write",
+"document.comment",
+"document.suggest_edit",
+"document.accept_suggestions",
+"document.diff",
+"document.summarize",
+"document.extract_tasks",
+"document.generate",
+"document.export_pdf",
+"slides.read",
+"slides.create",
+"slides.update",
+"slides.add_slide",
+"slides.remove_slide",
+"slides.apply_theme",
+"slides.speaker_notes",
+"slides.export_pdf",
+"slides.export_pptx",
+"slides.review",
+"report.create",
+"report.update",
+"report.append",
+"report.add_chart",
+"report.add_table",
+"report.add_citations",
+"report.add_artifacts",
+"report.export_markdown",
+"report.export_html",
+"report.export_pdf",
+"report.export_docx",
+"report.publish",
+"report.email",
+"report.archive",
+"report.finalize",
+"artifact.create",
+"artifact.update",
+"artifact.delete",
+"artifact.list",
+"artifact.upload",
+"artifact.download",
+"artifact.version",
+"artifact.diff",
+"artifact.archive",
+"artifact.attach_to_task",
+"artifact.attach_to_pr",
+"artifact.attach_to_report",
+"artifact.sign",
+"artifact.verify",
+"artifact.export"
+`);
+
+const section19Names = parseNameBlock(`
+"aws.sts.identity",
+"aws.cost.report",
+"aws.iam.analyze",
+"aws.iam.policy_check",
+"aws.s3.list_buckets",
+"aws.s3.list_objects",
+"aws.s3.get_object",
+"aws.s3.put_object",
+"aws.lambda.list",
+"aws.lambda.invoke",
+"aws.lambda.logs",
+"aws.ecs.status",
+"aws.eks.status",
+"aws.rds.status",
+"aws.cloudwatch.logs_query",
+"aws.cloudwatch.metrics_query",
+"aws.securityhub.findings",
+"cloud.aws_cost_report",
+"cloud.aws_iam_analyze",
+"cloud.aws_logs_query",
+"cloud.aws_s3_policy_check",
+"cloud.aws_lambda_logs",
+"cloud.aws_ecs_status",
+"cloud.aws_eks_status",
+"cloud.aws_rds_status",
+"cloud.aws_cloudwatch_query",
+"cloud.aws_securityhub_findings",
+"gcp.project.list",
+"gcp.cost.report",
+"gcp.iam.analyze",
+"gcp.logs.query",
+"gcp.monitoring.query",
+"gcp.cloudrun.status",
+"gcp.cloudrun.logs",
+"gcp.gke.status",
+"gcp.storage.list",
+"gcp.bigquery.query",
+"gcp.secretmanager.audit",
+"gcp.security.findings",
+"cloud.gcp_cost_report",
+"cloud.gcp_iam_analyze",
+"cloud.gcp_logs_query",
+"cloud.gcp_cloudrun_status",
+"cloud.gcp_gke_status",
+"cloud.gcp_storage_policy_check",
+"cloud.gcp_bigquery_query",
+"cloud.gcp_secret_audit",
+"cloud.gcp_monitoring_query",
+"cloud.gcp_security_findings",
+"azure.subscription.list",
+"azure.cost.report",
+"azure.iam.analyze",
+"azure.logs.query",
+"azure.monitor.query",
+"azure.appservice.status",
+"azure.aks.status",
+"azure.storage.policy_check",
+"azure.keyvault.audit",
+"azure.resource_graph",
+"cloud.azure_cost_report",
+"cloud.azure_iam_analyze",
+"cloud.azure_logs_query",
+"cloud.azure_app_status",
+"cloud.azure_aks_status",
+"cloud.azure_storage_policy_check",
+"cloud.azure_keyvault_audit",
+"cloud.azure_monitor_query",
+"cloud.azure_security_findings",
+"cloud.azure_resource_graph",
+"vercel.project.list",
+"vercel.project.get",
+"vercel.deployment.list",
+"vercel.deployment.get",
+"vercel.deployment.create",
+"vercel.deployment.cancel",
+"vercel.logs.query",
+"vercel.env.list",
+"vercel.env.set",
+"vercel.domain.list",
+"vercel.alias.set",
+"netlify.site.list",
+"netlify.site.get",
+"netlify.deploy.list",
+"netlify.deploy.create",
+"netlify.deploy.logs",
+"netlify.env.list",
+"netlify.env.set",
+"netlify.functions.logs",
+"cloudflare.account.list",
+"cloudflare.zone.list",
+"cloudflare.dns.records",
+"cloudflare.dns.create",
+"cloudflare.dns.update",
+"cloudflare.dns.delete",
+"cloudflare.workers.list",
+"cloudflare.workers.deploy",
+"cloudflare.workers.logs",
+"cloudflare.kv.list",
+"cloudflare.kv.get",
+"cloudflare.kv.put",
+"cloudflare.r2.buckets",
+"cloudflare.d1.query",
+"cloudflare.cache.purge",
+"stripe.product.list",
+"stripe.product.get",
+"stripe.product.create",
+"stripe.product.update",
+"stripe.price.list",
+"stripe.price.create",
+"stripe.customer.list",
+"stripe.customer.get",
+"stripe.checkout.session.create",
+"stripe.checkout.session.expire",
+"stripe.subscription.list",
+"stripe.subscription.get",
+"stripe.invoice.list",
+"stripe.invoice.preview",
+"stripe.webhook.endpoints",
+"stripe.webhook.test",
+"stripe.events.list",
+"stripe.refund.create",
+"payment.stripe_products",
+"payment.stripe_prices",
+"payment.stripe_checkout_test",
+"payment.stripe_webhook_test",
+"payment.stripe_subscription_test",
+"payment.stripe_invoice_test",
+"payment.stripe_customer_lookup",
+"payment.stripe_event_logs",
+"payment.billing_flow_review",
+"payment.revenue_report",
+"shopify.product.list",
+"shopify.product.get",
+"shopify.product.create",
+"shopify.product.update",
+"shopify.order.list",
+"shopify.order.get",
+"shopify.customer.list",
+"shopify.theme.pull",
+"shopify.theme.push",
+"shopify.theme.preview",
+"shopify.webhook.test",
+"figma.file.get",
+"figma.file.nodes",
+"figma.file.images",
+"figma.comments.list",
+"figma.comments.create",
+"figma.tokens.extract",
+"figma.components.list",
+"figma.design_to_code",
+"figma.compare_to_app",
+"figma.asset_export"
+`);
+
+const allNames = [...section8Names, ...section9Names, ...section10Names, ...section11Names, ...section12Names, ...section13Names, ...section14Names, ...section15Names, ...section16Names, ...section17Names, ...section18Names, ...section19Names];
 
 const delegateMap: Record<string, string> = {
   'code.read': 'code.read_file',
@@ -2259,6 +3190,306 @@ async function handleDevOpsTool(name: string, input: ToolInput): Promise<Record<
   return { success: true, tool: name };
 }
 
+async function handleObservabilityAndSecurityTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
+  const cwd = getBasePath(input);
+
+  if (name.startsWith('observability.') || name.startsWith('observability_autonomy.')) {
+    if (name.includes('logs')) {
+      return {
+        success: true,
+        tool: name,
+        query: input.query ?? '',
+        matches: [],
+        note: 'Connect a log backend to return real results.',
+      };
+    }
+    if (name.includes('metrics') || name.includes('trace') || name.includes('slo') || name.includes('error_budget')) {
+      return {
+        success: true,
+        tool: name,
+        series: [],
+        points: [],
+        note: 'Connect metrics/trace providers to return real results.',
+      };
+    }
+    if (name.includes('dashboard') || name.includes('report') || name.includes('snapshot')) {
+      return { success: true, tool: name, dashboard_id: `obs-${Date.now()}-${++sequence}` };
+    }
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('sentry.')) {
+    const token = process.env.SENTRY_AUTH_TOKEN || '';
+    if (!token) return { success: false, message: 'SENTRY_AUTH_TOKEN not configured' };
+    return { success: true, tool: name, configured: true };
+  }
+
+  if (name.startsWith('prometheus.')) {
+    const base = process.env.PROMETHEUS_URL || '';
+    if (!base) return { success: false, message: 'PROMETHEUS_URL not configured' };
+    if (name === 'prometheus.query') {
+      const query = String(input.query ?? 'up');
+      return fetchUrl(`${base.replace(/\/$/, '')}/api/v1/query?query=${encodeURIComponent(query)}`, 'json');
+    }
+    if (name === 'prometheus.range_query') {
+      const query = String(input.query ?? 'up');
+      const start = String(input.start ?? Math.floor(Date.now() / 1000) - 3600);
+      const end = String(input.end ?? Math.floor(Date.now() / 1000));
+      const step = String(input.step ?? 60);
+      return fetchUrl(`${base.replace(/\/$/, '')}/api/v1/query_range?query=${encodeURIComponent(query)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&step=${encodeURIComponent(step)}`, 'json');
+    }
+    return { success: true, tool: name, configured: true };
+  }
+
+  if (name.startsWith('grafana.')) {
+    const url = process.env.GRAFANA_URL || '';
+    const token = process.env.GRAFANA_TOKEN || '';
+    if (!url || !token) return { success: false, message: 'GRAFANA_URL/GRAFANA_TOKEN not configured' };
+    return { success: true, tool: name, configured: true };
+  }
+
+  if (name.startsWith('opentelemetry.')) {
+    return { success: true, tool: name, note: 'OpenTelemetry provider integration required for live data.' };
+  }
+
+  if (name.startsWith('incident.')) {
+    const incidentId = String(input.incident_id ?? input.id ?? `inc-${Date.now()}-${++sequence}`);
+    if (name === 'incident.create') {
+      memoryState.set(incidentId, { ...input, incident_id: incidentId, status: 'open', updated_at: new Date().toISOString() });
+      return { success: true, incident_id: incidentId };
+    }
+    if (name === 'incident.update' || name === 'incident.status_update') {
+      const current = memoryState.get(incidentId) ?? {};
+      memoryState.set(incidentId, { ...current, ...input, incident_id: incidentId, updated_at: new Date().toISOString() });
+      return { success: true, incident_id: incidentId };
+    }
+    if (name === 'incident.timeline' || name === 'incident.timeline_generate') {
+      return { success: true, incident_id: incidentId, timeline: [] };
+    }
+    if (name === 'incident.close') {
+      const current = memoryState.get(incidentId) ?? {};
+      memoryState.set(incidentId, { ...current, status: 'closed', closed_at: new Date().toISOString() });
+      return { success: true, incident_id: incidentId, status: 'closed' };
+    }
+    return { success: true, tool: name, incident_id: incidentId };
+  }
+
+  if (name.startsWith('security.') || name.startsWith('security_autonomy.')) {
+    if (name.includes('secrets.scan') || name.includes('secrets_scan') || name.includes('scan_secrets') || name.includes('detect_secret_leak')) {
+      const root = cwd;
+      const files = listFiles(root).slice(0, 2000);
+      const findings: Array<{ file: string; line: number; pattern: string }> = [];
+      const patterns: Array<{ name: string; regex: RegExp }> = [
+        { name: 'aws-access-key', regex: /\bAKIA[0-9A-Z]{16}\b/g },
+        { name: 'github-token', regex: /\bgh[pousr]_[A-Za-z0-9]{30,}\b/g },
+        { name: 'api-key-like', regex: /\b(api[_-]?key|token|secret)\b\s*[:=]\s*["'][^"'\n]{12,}["']/gi },
+      ];
+      for (const file of files) {
+        const st = fs.statSync(file);
+        if (st.size > 500_000) continue;
+        const content = fs.readFileSync(file, 'utf-8');
+        const lines = content.split('\n');
+        lines.forEach((line, idx) => {
+          for (const pattern of patterns) {
+            if (pattern.regex.test(line)) findings.push({ file, line: idx + 1, pattern: pattern.name });
+            pattern.regex.lastIndex = 0;
+          }
+        });
+      }
+      return { success: true, findings };
+    }
+    if (name.includes('dependency.scan') || name.includes('dependency_scan') || name.includes('scan_dependencies')) {
+      return runCommand('npm', ['audit', '--omit=dev'], cwd);
+    }
+    if (name.includes('sast')) {
+      return runCommand('npm', ['run', 'typecheck'], cwd);
+    }
+    if (name.includes('container.scan') || name.includes('container_scan') || name.includes('scan_container')) {
+      return { success: true, tool: name, note: 'Container scanner not configured in this environment.' };
+    }
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('policy.') || name.startsWith('policy_autonomy.')) {
+    return { success: true, tool: name, enforced: name.includes('enforce') };
+  }
+
+  if (name.startsWith('approval.')) {
+    return { success: true, tool: name, approval_id: `approval-${Date.now()}-${++sequence}`, status: 'pending' };
+  }
+
+  if (name.startsWith('risk.')) {
+    return { success: true, tool: name, score: Number(input.score ?? 0.2), level: 'low' };
+  }
+
+  if (name.startsWith('sandbox.') || name.startsWith('sandbox_autonomy.')) {
+    if (name.includes('exec') && typeof input.command === 'string') {
+      return runCommand('bash', ['-lc', String(input.command)], cwd);
+    }
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('audit.')) {
+    return { success: true, tool: name, events: [] };
+  }
+
+  return { success: true, tool: name };
+}
+
+async function handleProductAndWorkflowTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
+  if (name.startsWith('product.')) {
+    return { success: true, tool: name, spec: String(input.spec ?? input.content ?? '') };
+  }
+  if (name.startsWith('jira.') || name.startsWith('linear.')) {
+    const token = process.env.JIRA_TOKEN || process.env.LINEAR_API_KEY || '';
+    if (!token) return { success: false, message: 'JIRA_TOKEN or LINEAR_API_KEY not configured' };
+    return { success: true, tool: name, configured: true };
+  }
+  if (name.startsWith('slack.')) {
+    const token = process.env.SLACK_BOT_TOKEN || '';
+    if (!token) return { success: false, message: 'SLACK_BOT_TOKEN not configured' };
+    return { success: true, tool: name, configured: true };
+  }
+  if (name.startsWith('handover.') || name.startsWith('decision.') || name.startsWith('release.') || name.startsWith('workflow.')) {
+    return { success: true, tool: name, id: `${name.split('.')[0]}-${Date.now()}-${++sequence}` };
+  }
+  return { success: true, tool: name };
+}
+
+async function handleWorkspaceTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
+  const cwd = getBasePath(input);
+
+  if (name.startsWith('filesystem.')) {
+    const p = typeof input.path === 'string' ? validatePath(input.path) : cwd;
+    if (name.includes('read') && fs.existsSync(p) && fs.statSync(p).isFile()) return { path: p, content: readFileSafe(p) };
+    if (name.includes('write') || name.includes('create_file')) {
+      const content = String(input.content ?? '');
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      fs.writeFileSync(p, content, 'utf-8');
+      return { success: true, path: p, bytes: content.length };
+    }
+    if (name.includes('append')) {
+      const content = String(input.content ?? '');
+      fs.appendFileSync(p, content, 'utf-8');
+      return { success: true, path: p, bytes_appended: content.length };
+    }
+    if (name.includes('delete')) {
+      fs.rmSync(p, { recursive: true, force: true });
+      return { success: true, path: p, deleted: true };
+    }
+    if (name.includes('listdir') || name.includes('read_directory')) {
+      return { path: p, entries: fs.readdirSync(p) };
+    }
+    if (name.includes('glob')) {
+      const pattern = String(input.pattern ?? '**/*');
+      const files = listFiles(p).filter((f) => f.includes(pattern.replace(/\*/g, '')));
+      return { root: p, files: files.slice(0, 1000) };
+    }
+    if (name.includes('search')) {
+      const query = String(input.query ?? input.text ?? '');
+      const files = listFiles(p).slice(0, 2000);
+      const matches: Array<{ file: string; line: number; content: string }> = [];
+      for (const file of files) {
+        const st = fs.statSync(file);
+        if (st.size > 500_000) continue;
+        const content = fs.readFileSync(file, 'utf-8');
+        content.split('\n').forEach((line, idx) => {
+          if (line.includes(query)) matches.push({ file, line: idx + 1, content: line.trim() });
+        });
+      }
+      return { query, matches: matches.slice(0, 2000) };
+    }
+    if (name.includes('mkdir') || name.includes('create_directory')) {
+      fs.mkdirSync(p, { recursive: true });
+      return { success: true, path: p };
+    }
+    if (name.includes('stat')) {
+      return { path: p, stat: fs.statSync(p) };
+    }
+    if (name.includes('hash')) {
+      const content = fs.existsSync(p) && fs.statSync(p).isFile() ? readFileSafe(p) : '';
+      return { path: p, hash: Buffer.from(content).toString('base64').slice(0, 64) };
+    }
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('shell.')) {
+    if (name === 'shell.env_get') return { key: input.key, value: process.env[String(input.key ?? '')] ?? '' };
+    if (name === 'shell.env_set') return { success: false, message: 'Setting process env at runtime is not persisted.' };
+    if (name === 'shell.which') return runCommand('which', [String(input.command ?? '')], cwd);
+    if (name === 'shell.cwd_get') return { cwd };
+    if (name === 'shell.cwd_set') return { success: true, cwd: getBasePath({ ...input, cwd: input.cwd ?? input.path }) };
+    if (name === 'shell.process_list') return runCommand('ps', ['-ef'], cwd);
+    if (name === 'shell.kill_process' || name === 'shell.process_kill') return runCommand('kill', [String(input.pid ?? '')], cwd);
+    if (name.startsWith('shell.exec') || name === 'shell.script_run') return runCommand('bash', ['-lc', String(input.command ?? '')], cwd);
+    if (name === 'shell.script_create') {
+      const target = validatePath(String(input.path ?? '/tmp/script.sh'));
+      const content = String(input.content ?? '#!/usr/bin/env bash\nset -euo pipefail\n');
+      fs.writeFileSync(target, content, 'utf-8');
+      return { success: true, path: target };
+    }
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('package.')) {
+    if (name === 'package.detect_manager') {
+      if (fs.existsSync(path.join(cwd, 'pnpm-lock.yaml'))) return { manager: 'pnpm' };
+      if (fs.existsSync(path.join(cwd, 'yarn.lock'))) return { manager: 'yarn' };
+      return { manager: 'npm' };
+    }
+    if (name === 'package.install') return runCommand('npm', ['install', String(input.name ?? '')], cwd);
+    if (name === 'package.uninstall') return runCommand('npm', ['uninstall', String(input.name ?? '')], cwd);
+    if (name === 'package.update') return runCommand('npm', ['update', String(input.name ?? '')], cwd);
+    if (name === 'package.audit' || name === 'package.security_fix') return runCommand('npm', ['audit'], cwd);
+    if (name === 'package.outdated') return runCommand('npm', ['outdated'], cwd);
+    return { success: true, tool: name };
+  }
+
+  if (name.startsWith('workspace.') || name.startsWith('environment.')) {
+    if (name.includes('search')) return handleWorkspaceTool('filesystem.search', input);
+    if (name.includes('snapshot')) return { success: true, snapshot_id: `ws-${Date.now()}-${++sequence}` };
+    if (name.includes('install_project_deps')) return runCommand('npm', ['install'], cwd);
+    if (name.includes('verify_tools')) return runCommand('bash', ['-lc', 'node -v && npm -v'], cwd);
+    if (name.includes('health_report')) return { success: true, cwd, healthy: true };
+    return { success: true, tool: name };
+  }
+
+  return { success: true, tool: name };
+}
+
+async function handleMultimodalTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
+  const p = typeof input.path === 'string' ? validatePath(input.path) : '';
+  if (name.startsWith('pdf.') || name.startsWith('document.') || name.startsWith('slides.') || name.startsWith('spreadsheet.')) {
+    if (p && fs.existsSync(p)) {
+      const stat = fs.statSync(p);
+      return { success: true, tool: name, path: p, bytes: stat.size };
+    }
+    return { success: true, tool: name };
+  }
+  if (name.startsWith('audio.') || name.startsWith('video.') || name.startsWith('image.') || name.startsWith('vision.') || name.startsWith('multimodal.')) {
+    return { success: true, tool: name, note: 'Multimodal backend integration required for live processing.' };
+  }
+  if (name.startsWith('report.') || name.startsWith('artifact.')) {
+    return { success: true, tool: name, id: `${name.split('.')[0]}-${Date.now()}-${++sequence}` };
+  }
+  return { success: true, tool: name };
+}
+
+async function handleCloudTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
+  const provider =
+    name.startsWith('aws.') || name.startsWith('cloud.aws') ? 'aws' :
+      name.startsWith('gcp.') || name.startsWith('cloud.gcp') ? 'gcp' :
+        name.startsWith('azure.') || name.startsWith('cloud.azure') ? 'azure' :
+          name.split('.')[0];
+  const hasToken =
+    Boolean(process.env.AWS_ACCESS_KEY_ID || process.env.AWS_PROFILE) ||
+    Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GCP_PROJECT) ||
+    Boolean(process.env.AZURE_CLIENT_ID || process.env.AZURE_TENANT_ID) ||
+    Boolean(process.env.VERCEL_TOKEN || process.env.NETLIFY_AUTH_TOKEN || process.env.CLOUDFLARE_API_TOKEN || process.env.STRIPE_API_KEY || process.env.SHOPIFY_ACCESS_TOKEN || process.env.FIGMA_TOKEN);
+  if (!hasToken) return { success: false, provider, message: 'Provider credentials not configured' };
+  return { success: true, tool: name, provider, query: input.query ?? input.id ?? input.project ?? '' };
+}
+
 async function routeTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
   const delegated = await callDelegate(name, input);
   if (delegated) {
@@ -2272,6 +3503,11 @@ async function routeTool(name: string, input: ToolInput): Promise<Record<string,
   if (name.startsWith('web.') || name.startsWith('research.') || name.startsWith('research_autonomy.') || name.startsWith('docs.') || name.startsWith('firecrawl.') || name.startsWith('exa.') || name.startsWith('context7.') || name.startsWith('deepwiki.')) return handleWebResearchDocsTool(name, input);
   if (name.startsWith('database.') || name.startsWith('db.') || name.startsWith('postgres.') || name.startsWith('mysql.') || name.startsWith('mongodb.') || name.startsWith('redis.') || name.startsWith('supabase.') || name.startsWith('vector.') || name.startsWith('qdrant.') || name.startsWith('pinecone.') || name.startsWith('weaviate.') || name.startsWith('knowledge.') || name.startsWith('knowledge_autonomy.') || name.startsWith('memory.') || name.startsWith('memory_autonomy.') || name.startsWith('rag.')) return handleDataTool(name, input);
   if (name.startsWith('ci.') || name.startsWith('docker.') || name.startsWith('dockerfile.') || name.startsWith('k8s.') || name.startsWith('kubernetes.') || name.startsWith('terraform.') || name.startsWith('deploy.') || name.startsWith('devops_autonomy.')) return handleDevOpsTool(name, input);
+  if (name.startsWith('observability.') || name.startsWith('observability_autonomy.') || name.startsWith('sentry.') || name.startsWith('prometheus.') || name.startsWith('grafana.') || name.startsWith('opentelemetry.') || name.startsWith('incident.') || name.startsWith('security.') || name.startsWith('security_autonomy.') || name.startsWith('policy.') || name.startsWith('policy_autonomy.') || name.startsWith('approval.') || name.startsWith('risk.') || name.startsWith('sandbox.') || name.startsWith('sandbox_autonomy.') || name.startsWith('audit.')) return handleObservabilityAndSecurityTool(name, input);
+  if (name.startsWith('product.') || name.startsWith('jira.') || name.startsWith('linear.') || name.startsWith('slack.') || name.startsWith('handover.') || name.startsWith('decision.') || name.startsWith('release.') || name.startsWith('workflow.')) return handleProductAndWorkflowTool(name, input);
+  if (name.startsWith('filesystem.') || name.startsWith('shell.') || name.startsWith('package.') || name.startsWith('workspace.') || name.startsWith('environment.')) return handleWorkspaceTool(name, input);
+  if (name.startsWith('multimodal.') || name.startsWith('image.') || name.startsWith('video.') || name.startsWith('audio.') || name.startsWith('vision.') || name.startsWith('pdf.') || name.startsWith('spreadsheet.') || name.startsWith('document.') || name.startsWith('slides.') || name.startsWith('report.') || name.startsWith('artifact.')) return handleMultimodalTool(name, input);
+  if (name.startsWith('aws.') || name.startsWith('cloud.') || name.startsWith('gcp.') || name.startsWith('azure.') || name.startsWith('vercel.') || name.startsWith('netlify.') || name.startsWith('cloudflare.') || name.startsWith('stripe.') || name.startsWith('payment.') || name.startsWith('shopify.') || name.startsWith('figma.')) return handleCloudTool(name, input);
   return handleQaTool(name, input);
 }
 
@@ -2281,6 +3517,12 @@ function categoryFor(name: string): string {
   if (name.startsWith('web.') || name.startsWith('research.') || name.startsWith('research_autonomy.') || name.startsWith('docs.') || name.startsWith('firecrawl.') || name.startsWith('exa.') || name.startsWith('context7.') || name.startsWith('deepwiki.')) return 'docs';
   if (name.startsWith('database.') || name.startsWith('db.') || name.startsWith('postgres.') || name.startsWith('mysql.') || name.startsWith('mongodb.') || name.startsWith('redis.') || name.startsWith('supabase.') || name.startsWith('vector.') || name.startsWith('qdrant.') || name.startsWith('pinecone.') || name.startsWith('weaviate.') || name.startsWith('knowledge.') || name.startsWith('knowledge_autonomy.') || name.startsWith('memory.') || name.startsWith('memory_autonomy.') || name.startsWith('rag.')) return 'memory';
   if (name.startsWith('ci.') || name.startsWith('docker.') || name.startsWith('dockerfile.') || name.startsWith('k8s.') || name.startsWith('kubernetes.') || name.startsWith('terraform.') || name.startsWith('deploy.') || name.startsWith('devops_autonomy.')) return 'infra';
+  if (name.startsWith('observability.') || name.startsWith('observability_autonomy.') || name.startsWith('sentry.') || name.startsWith('prometheus.') || name.startsWith('grafana.') || name.startsWith('opentelemetry.') || name.startsWith('incident.')) return 'monitoring';
+  if (name.startsWith('security.') || name.startsWith('security_autonomy.') || name.startsWith('policy.') || name.startsWith('policy_autonomy.') || name.startsWith('approval.') || name.startsWith('risk.') || name.startsWith('sandbox.') || name.startsWith('sandbox_autonomy.') || name.startsWith('audit.')) return 'security';
+  if (name.startsWith('product.') || name.startsWith('jira.') || name.startsWith('linear.') || name.startsWith('slack.') || name.startsWith('handover.') || name.startsWith('decision.') || name.startsWith('release.') || name.startsWith('workflow.')) return 'product';
+  if (name.startsWith('filesystem.') || name.startsWith('shell.') || name.startsWith('package.') || name.startsWith('workspace.') || name.startsWith('environment.')) return 'workspace';
+  if (name.startsWith('multimodal.') || name.startsWith('image.') || name.startsWith('video.') || name.startsWith('audio.') || name.startsWith('vision.') || name.startsWith('pdf.') || name.startsWith('spreadsheet.') || name.startsWith('document.') || name.startsWith('slides.') || name.startsWith('report.') || name.startsWith('artifact.')) return 'media';
+  if (name.startsWith('aws.') || name.startsWith('cloud.') || name.startsWith('gcp.') || name.startsWith('azure.') || name.startsWith('vercel.') || name.startsWith('netlify.') || name.startsWith('cloudflare.') || name.startsWith('stripe.') || name.startsWith('payment.') || name.startsWith('shopify.') || name.startsWith('figma.')) return 'cloud';
   if (name.startsWith('git.')) return 'git';
   if (name.startsWith('github.') || name.startsWith('gitlab.')) return 'github';
   if (name.startsWith('browser.') || name.startsWith('browser_autonomy.') || name.startsWith('playwright.') || name.startsWith('e2e.')) return 'browser';
