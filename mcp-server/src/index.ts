@@ -6,6 +6,7 @@ import { logger } from './utils/logger';
 import './tools/agent/index';
 import './tools/agent/tasks';
 import './tools/autonomy/index';
+import './tools/autonomy/cloud-model-mcp';
 import './tools/workflow/index';
 import './tools/memory/index';
 import './tools/memory/project';
