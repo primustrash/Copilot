@@ -93,6 +93,7 @@ docker compose up -d
 | `/mcp/prompts` | GET | List prompts |
 | `/auth/oauth` | GET | Start OAuth flow |
 | `/auth/callback` | GET | OAuth callback |
+| `/auth/token` | POST | Manual OAuth token exchange (code/refresh/client_credentials) |
 
 ---
 
@@ -113,6 +114,10 @@ curl -X POST http://localhost:3000/mcp/tools/call \
   -d '{"tool": "list_agents", "input": {}}'
 ```
 
+Alternative Schemes (für kompatible Clients):
+- `Authorization: Token <token>`
+- `Authorization: ApiKey <api-key>`
+
 ### Basic Auth
 ```bash
 curl -X POST http://localhost:3000/mcp/tools/call \
@@ -125,6 +130,37 @@ curl -X POST http://localhost:3000/mcp/tools/call \
 2. User authenticates at auth_url
 3. Callback to `/auth/callback` returns JWT `mcp_token`
 4. Use `mcp_token` as Bearer token
+
+### OAuth 2.0 (manuell / non-browser)
+```bash
+curl -X POST http://localhost:3000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "grant_type":"authorization_code",
+    "code":"<authorization_code>",
+    "redirect_uri":"http://localhost:3000/auth/callback",
+    "code_verifier":"<optional-pkce-verifier>"
+  }'
+```
+
+Refresh Token:
+```bash
+curl -X POST http://localhost:3000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"grant_type":"refresh_token","refresh_token":"<refresh_token>"}'
+```
+
+Client Credentials:
+```bash
+curl -X POST http://localhost:3000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"grant_type":"client_credentials","scope":"openid profile"}'
+```
+
+### Zusätzliche universelle Auth-Modi (konfigurierbar)
+- Query Token (wenn `AUTH_ALLOW_QUERY_TOKEN=true`): `?api_key=...` / `?access_token=...`
+- Body Token (wenn `AUTH_ALLOW_BODY_TOKEN=true`): JSON-Felder `api_key`, `access_token`, ...
+- Cookie Token (wenn `AUTH_ALLOW_COOKIE_TOKEN=true`): `mcp_token`, `access_token`, `api_key`
 
 ### Auth-Metadaten / Methoden
 - `GET /auth/methods` → aktive Auth-Varianten, Header und Remote-MCP-Profile

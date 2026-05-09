@@ -30,6 +30,12 @@ export const config = {
     allowBearerApiKey: process.env.AUTH_ALLOW_BEARER_API_KEY !== 'false',
     allowBasicAuth: process.env.AUTH_ALLOW_BASIC !== 'false',
     allowJwtBearer: process.env.AUTH_ALLOW_JWT !== 'false',
+    allowQueryTokenAuth: process.env.AUTH_ALLOW_QUERY_TOKEN === 'true',
+    allowBodyTokenAuth: process.env.AUTH_ALLOW_BODY_TOKEN === 'true',
+    allowCookieTokenAuth: process.env.AUTH_ALLOW_COOKIE_TOKEN !== 'false',
+    acceptedQueryTokenParams: splitCsv(process.env.AUTH_QUERY_TOKEN_PARAMS || 'api_key,apikey,access_token,token'),
+    acceptedBodyTokenFields: splitCsv(process.env.AUTH_BODY_TOKEN_FIELDS || 'api_key,apikey,access_token,token'),
+    acceptedCookieNames: splitCsv(process.env.AUTH_COOKIE_TOKEN_NAMES || 'mcp_token,access_token,api_key'),
     oauth: {
       clientId: process.env.OAUTH_CLIENT_ID || '',
       clientSecret: process.env.OAUTH_CLIENT_SECRET || '',

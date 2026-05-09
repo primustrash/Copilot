@@ -9,7 +9,7 @@ import bodyParser from 'body-parser';
 import { config } from './utils/config';
 import { logger } from './utils/logger';
 import { apiKeyMiddleware } from './auth/apikey';
-import { handleOAuthInitiate, handleOAuthMetadata, handleOAuthRedirect } from './auth/oauth';
+import { handleOAuthInitiate, handleOAuthMetadata, handleOAuthRedirect, handleOAuthTokenExchange } from './auth/oauth';
 import { setupSSE, sendSSEEvent, getConnectedClients } from './transport/sse';
 import {
   handleToolCall,
@@ -77,18 +77,36 @@ export function createServer(): express.Application {
   // OAuth endpoints (no auth required)
   app.get('/auth/oauth', handleOAuthInitiate);
   app.get('/auth/callback', handleOAuthRedirect);
+  app.post('/auth/token', handleOAuthTokenExchange);
   app.get('/auth/methods', (_req, res) => {
     res.json({
       methods: [
         { type: 'api-key', headers: config.auth.acceptedApiKeyHeaders },
-        { type: 'bearer', accepts: ['api-key', 'jwt', 'oauth2-access-token'] },
+        { type: 'bearer', schemes: ['Bearer', 'Token', 'ApiKey'], accepts: ['api-key', 'jwt', 'oauth2-access-token'] },
         { type: 'basic', enabled: config.auth.allowBasicAuth },
+        {
+          type: 'query-token',
+          enabled: config.auth.allowQueryTokenAuth,
+          params: config.auth.acceptedQueryTokenParams,
+        },
+        {
+          type: 'body-token',
+          enabled: config.auth.allowBodyTokenAuth,
+          fields: config.auth.acceptedBodyTokenFields,
+        },
+        {
+          type: 'cookie-token',
+          enabled: config.auth.allowCookieTokenAuth,
+          cookies: config.auth.acceptedCookieNames,
+        },
         {
           type: 'oauth2',
           authorization_url: config.auth.oauth.authUrl,
           token_url: config.auth.oauth.tokenUrl,
           grant_types: config.auth.oauth.grantTypes,
           scopes: config.auth.oauth.scopes,
+          endpoints: ['/auth/oauth', '/auth/callback', '/auth/token'],
+          configured: Boolean(config.auth.oauth.authUrl && config.auth.oauth.tokenUrl && config.auth.oauth.clientId),
         },
       ],
       remote_profiles: {
@@ -169,8 +187,20 @@ export function createServer(): express.Application {
       tools: getToolCount(),
       transport: ['sse', 'streamable-http', 'json-rpc'],
       auth: {
-        methods: ['api-key', 'bearer', 'basic', 'oauth2'],
+        methods: ['api-key', 'bearer', 'basic', 'query-token', 'body-token', 'cookie-token', 'oauth2'],
         api_key_headers: config.auth.acceptedApiKeyHeaders,
+        query_token: {
+          enabled: config.auth.allowQueryTokenAuth,
+          params: config.auth.acceptedQueryTokenParams,
+        },
+        body_token: {
+          enabled: config.auth.allowBodyTokenAuth,
+          fields: config.auth.acceptedBodyTokenFields,
+        },
+        cookie_token: {
+          enabled: config.auth.allowCookieTokenAuth,
+          cookies: config.auth.acceptedCookieNames,
+        },
         oauth: {
           authorization_url: config.auth.oauth.authUrl,
           token_url: config.auth.oauth.tokenUrl,
