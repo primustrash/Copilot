@@ -26,27 +26,71 @@ export interface SandboxResult {
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_MAX_OUTPUT = 1024 * 1024; // 1 MB
 
-// Hardcoded safe PATH (never derived from environment to prevent injection)
+// Hardcoded safe PATH (never derived from environment)
 const SAFE_PATH = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin';
 
-// Hardcoded directories to resolve commands from (same as SAFE_PATH)
-const SAFE_DIRS = [
-  '/usr/local/sbin', '/usr/local/bin', '/usr/sbin',
-  '/usr/bin', '/sbin', '/bin',
-];
-
-// Allowlist of permitted base command names
-const ALLOWED_COMMANDS = new Set([
-  'bash', 'sh', 'python3', 'python', 'node', 'npm', 'npx',
-  'git', 'curl', 'wget', 'grep', 'find', 'ls', 'cat', 'head', 'tail',
-  'diff', 'patch', 'sed', 'awk', 'wc', 'sort', 'uniq',
-  'systemctl', 'journalctl', 'docker', 'kill', 'ps', 'free', 'df', 'top',
-  'mkdir', 'cp', 'mv', 'rm', 'chmod', 'chown', 'tar', 'gzip', 'gunzip',
-  'crontab', 'ssh', 'scp', 'rsync', 'apt-get', 'pip3', 'pip', 'cargo',
-  'xdotool', 'xclip', 'scrot', 'wmctrl', 'xdpyinfo',
-  'ffmpeg', 'sox', 'arecord', 'aplay', 'tesseract',
-  'black', 'prettier', 'eslint', 'tsc',
-]);
+// Hardcoded, fully-qualified paths for each allowed command.
+// Using a closed Map prevents user input from influencing the executable path.
+const COMMAND_PATHS: Readonly<Record<string, string>> = {
+  bash:       '/bin/bash',
+  sh:         '/bin/sh',
+  python3:    '/usr/bin/python3',
+  python:     '/usr/bin/python',
+  node:       '/usr/bin/node',
+  npm:        '/usr/bin/npm',
+  npx:        '/usr/bin/npx',
+  git:        '/usr/bin/git',
+  curl:       '/usr/bin/curl',
+  wget:       '/usr/bin/wget',
+  grep:       '/bin/grep',
+  find:       '/usr/bin/find',
+  ls:         '/bin/ls',
+  cat:        '/bin/cat',
+  head:       '/usr/bin/head',
+  tail:       '/usr/bin/tail',
+  diff:       '/usr/bin/diff',
+  patch:      '/usr/bin/patch',
+  sed:        '/bin/sed',
+  awk:        '/usr/bin/awk',
+  wc:         '/usr/bin/wc',
+  sort:       '/usr/bin/sort',
+  uniq:       '/usr/bin/uniq',
+  kill:       '/bin/kill',
+  ps:         '/bin/ps',
+  df:         '/bin/df',
+  free:       '/usr/bin/free',
+  top:        '/usr/bin/top',
+  mkdir:      '/bin/mkdir',
+  cp:         '/bin/cp',
+  mv:         '/bin/mv',
+  rm:         '/bin/rm',
+  chmod:      '/bin/chmod',
+  chown:      '/bin/chown',
+  tar:        '/bin/tar',
+  gzip:       '/bin/gzip',
+  gunzip:     '/bin/gunzip',
+  ssh:        '/usr/bin/ssh',
+  scp:        '/usr/bin/scp',
+  rsync:      '/usr/bin/rsync',
+  'apt-get':  '/usr/bin/apt-get',
+  pip3:       '/usr/bin/pip3',
+  pip:        '/usr/bin/pip',
+  xdotool:    '/usr/bin/xdotool',
+  xclip:      '/usr/bin/xclip',
+  scrot:      '/usr/bin/scrot',
+  wmctrl:     '/usr/bin/wmctrl',
+  xdpyinfo:   '/usr/bin/xdpyinfo',
+  ffmpeg:     '/usr/bin/ffmpeg',
+  sox:        '/usr/bin/sox',
+  arecord:    '/usr/bin/arecord',
+  aplay:      '/usr/bin/aplay',
+  tesseract:  '/usr/bin/tesseract',
+  tsc:        '/usr/bin/tsc',
+  crontab:    '/usr/bin/crontab',
+  journalctl: '/usr/bin/journalctl',
+  systemctl:  '/usr/bin/systemctl',
+  docker:     '/usr/bin/docker',
+};
 
 const BLOCKED_PATTERNS = [
   'rm -rf /',
@@ -54,41 +98,6 @@ const BLOCKED_PATTERNS = [
   'dd if=/dev/zero',
   ':(){ :|:& };:',
 ];
-
-/**
- * Resolve command to full path using only safe, hardcoded directories.
- * Never uses process.env.PATH.
- */
-function resolveCommandPath(command: string): string {
-  // If it's already an absolute path, validate it's within safe dirs
-  if (path.isAbsolute(command)) {
-    const inSafeDir = SAFE_DIRS.some(dir => command.startsWith(dir + '/'));
-    if (!inSafeDir) {
-      throw new Error(`Absolute command path not in safe directories: ${command}`);
-    }
-    if (!fs.existsSync(command)) {
-      throw new Error(`Command not found: ${command}`);
-    }
-    return command;
-  }
-
-  // Search in safe dirs only
-  const baseName = path.basename(command);
-  for (const dir of SAFE_DIRS) {
-    const fullPath = path.join(dir, baseName);
-    if (fs.existsSync(fullPath)) {
-      return fullPath;
-    }
-  }
-
-  // Fall back to command name (let execFile resolve it without shell)
-  return command;
-}
-
-function isCommandAllowed(command: string): boolean {
-  const base = path.basename(command);
-  return ALLOWED_COMMANDS.has(base);
-}
 
 function isCommandSafe(fullCommand: string): boolean {
   const lower = fullCommand.toLowerCase();
@@ -117,8 +126,10 @@ export async function runSandboxed(
     env = {},
   } = options;
 
-  // Validate command against allowlist
-  if (!isCommandAllowed(command)) {
+  // Validate command against the hardcoded allowlist and get its fixed path
+  const baseName = path.basename(command);
+  const fixedPath = COMMAND_PATHS[baseName];
+  if (!fixedPath) {
     throw new Error(`Command not in allowlist: ${command}`);
   }
 
@@ -126,16 +137,14 @@ export async function runSandboxed(
     throw new Error(`Command blocked by sandbox policy: ${command}`);
   }
 
-  // Resolve to full path using safe, hardcoded directories only
-  const resolvedCommand = resolveCommandPath(command);
+  logger.debug('sandbox_exec', { command: fixedPath, args, cwd });
 
-  logger.debug('sandbox_exec', { command: resolvedCommand, args, cwd });
-
+  // Use the fixed, hardcoded path - never user input
   try {
     const result = await Promise.race([
-      execFileAsync(resolvedCommand, args, {
+      execFileAsync(fixedPath, args, {
         cwd,
-        // Use only safe, hardcoded PATH - never inherit from environment
+        // Use only safe, hardcoded PATH - never inherit from process.env
         env: { ...env, PATH: SAFE_PATH, HOME: process.env.HOME || '/root' },
         maxBuffer: DEFAULT_MAX_OUTPUT,
       }),
