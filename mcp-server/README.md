@@ -113,11 +113,32 @@ curl -X POST http://localhost:3000/mcp/tools/call \
   -d '{"tool": "list_agents", "input": {}}'
 ```
 
+### Basic Auth
+```bash
+curl -X POST http://localhost:3000/mcp/tools/call \
+  -u "api-key:your-api-key" \
+  -d '{"tool": "list_agents", "input": {}}'
+```
+
 ### OAuth 2.0
 1. GET `/auth/oauth` → returns `auth_url`
 2. User authenticates at auth_url
 3. Callback to `/auth/callback` returns JWT `mcp_token`
 4. Use `mcp_token` as Bearer token
+
+### Auth-Metadaten / Methoden
+- `GET /auth/methods` → aktive Auth-Varianten, Header und Remote-MCP-Profile
+- `GET /.well-known/oauth-authorization-server` → OAuth-Metadaten
+
+### Remote MCP Profile
+- PrimusNex-Endpunkte können lokal über `.env` aktiviert werden:
+  - `PRIMUSNEX_MCP_URL`
+  - `PRIMUSNEX_API_KEY_HEADER`
+  - `PRIMUSNEX_OAUTH_AUTH_URL`
+  - `PRIMUSNEX_OAUTH_TOKEN_URL`
+  - `PRIMUSNEX_OAUTH_CLIENT_ID`
+  - `PRIMUSNEX_OAUTH_CLIENT_SECRET`
+- Zugangsdaten werden bewusst **nicht** im Repository gespeichert.
 
 ---
 

@@ -9,7 +9,7 @@ import bodyParser from 'body-parser';
 import { config } from './utils/config';
 import { logger } from './utils/logger';
 import { apiKeyMiddleware } from './auth/apikey';
-import { handleOAuthInitiate, handleOAuthRedirect } from './auth/oauth';
+import { handleOAuthInitiate, handleOAuthMetadata, handleOAuthRedirect } from './auth/oauth';
 import { setupSSE, sendSSEEvent, getConnectedClients } from './transport/sse';
 import {
   handleToolCall,
@@ -37,7 +37,7 @@ export function createServer(): express.Application {
   app.use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'API-Key', 'X-Auth-Token', ...config.auth.acceptedApiKeyHeaders],
   }));
 
   // Compression
@@ -77,6 +77,33 @@ export function createServer(): express.Application {
   // OAuth endpoints (no auth required)
   app.get('/auth/oauth', handleOAuthInitiate);
   app.get('/auth/callback', handleOAuthRedirect);
+  app.get('/auth/methods', (_req, res) => {
+    res.json({
+      methods: [
+        { type: 'api-key', headers: config.auth.acceptedApiKeyHeaders },
+        { type: 'bearer', accepts: ['api-key', 'jwt', 'oauth2-access-token'] },
+        { type: 'basic', enabled: config.auth.allowBasicAuth },
+        {
+          type: 'oauth2',
+          authorization_url: config.auth.oauth.authUrl,
+          token_url: config.auth.oauth.tokenUrl,
+          grant_types: config.auth.oauth.grantTypes,
+          scopes: config.auth.oauth.scopes,
+        },
+      ],
+      remote_profiles: {
+        primusnex: {
+          mcp_url: config.auth.remoteProfiles.primusnex.mcpUrl,
+          api_key_header: config.auth.remoteProfiles.primusnex.apiKeyHeader,
+          oauth_authorization_url: config.auth.remoteProfiles.primusnex.oauthAuthUrl,
+          oauth_token_url: config.auth.remoteProfiles.primusnex.oauthTokenUrl,
+          client_id_configured: Boolean(config.auth.remoteProfiles.primusnex.clientId),
+          client_secret_configured: Boolean(config.auth.remoteProfiles.primusnex.clientSecret),
+        },
+      },
+    });
+  });
+  app.get('/.well-known/oauth-authorization-server', handleOAuthMetadata);
 
   // SSE endpoint (light auth)
   app.get('/mcp/sse', (req, res) => {
@@ -141,7 +168,16 @@ export function createServer(): express.Application {
       description: 'Full-featured MCP server with all tool categories',
       tools: getToolCount(),
       transport: ['sse', 'streamable-http', 'json-rpc'],
-      auth: ['api-key', 'oauth2'],
+      auth: {
+        methods: ['api-key', 'bearer', 'basic', 'oauth2'],
+        api_key_headers: config.auth.acceptedApiKeyHeaders,
+        oauth: {
+          authorization_url: config.auth.oauth.authUrl,
+          token_url: config.auth.oauth.tokenUrl,
+          scopes: config.auth.oauth.scopes,
+          grant_types: config.auth.oauth.grantTypes,
+        },
+      },
     });
   });
 

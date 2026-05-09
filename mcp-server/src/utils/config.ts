@@ -3,6 +3,13 @@ import path from 'path';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
+function splitCsv(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 export const config = {
   server: {
     port: parseInt(process.env.MCP_PORT || '3000', 10),
@@ -19,12 +26,33 @@ export const config = {
     apiKeySecret: process.env.API_KEY_SECRET || 'default-secret-change-me',
     jwtSecret: process.env.JWT_SECRET || 'default-jwt-secret-change-me',
     jwtExpiry: process.env.JWT_EXPIRY || '1h',
+    acceptedApiKeyHeaders: splitCsv(process.env.AUTH_API_KEY_HEADERS || 'x-api-key,api-key,x-auth-token'),
+    allowBearerApiKey: process.env.AUTH_ALLOW_BEARER_API_KEY !== 'false',
+    allowBasicAuth: process.env.AUTH_ALLOW_BASIC !== 'false',
+    allowJwtBearer: process.env.AUTH_ALLOW_JWT !== 'false',
     oauth: {
       clientId: process.env.OAUTH_CLIENT_ID || '',
       clientSecret: process.env.OAUTH_CLIENT_SECRET || '',
       redirectUri: process.env.OAUTH_REDIRECT_URI || 'http://localhost:3000/auth/callback',
       authUrl: process.env.OAUTH_AUTH_URL || '',
       tokenUrl: process.env.OAUTH_TOKEN_URL || '',
+      userInfoUrl: process.env.OAUTH_USERINFO_URL || '',
+      introspectionUrl: process.env.OAUTH_INTROSPECTION_URL || '',
+      revokeUrl: process.env.OAUTH_REVOKE_URL || '',
+      scopes: splitCsv(process.env.OAUTH_SCOPES || 'openid,email,profile'),
+      grantTypes: splitCsv(process.env.OAUTH_GRANT_TYPES || 'authorization_code,refresh_token,client_credentials'),
+      tokenAuthMethod: process.env.OAUTH_TOKEN_AUTH_METHOD || 'client_secret_post',
+      pkceEnabled: process.env.OAUTH_PKCE_ENABLED !== 'false',
+    },
+    remoteProfiles: {
+      primusnex: {
+        mcpUrl: process.env.PRIMUSNEX_MCP_URL || 'https://mcp.primusnex.com/mcp',
+        apiKeyHeader: process.env.PRIMUSNEX_API_KEY_HEADER || 'x-api-key',
+        oauthAuthUrl: process.env.PRIMUSNEX_OAUTH_AUTH_URL || 'https://mcp.primusnex.com/oauth/authorize',
+        oauthTokenUrl: process.env.PRIMUSNEX_OAUTH_TOKEN_URL || 'https://mcp.primusnex.com/oauth/token',
+        clientId: process.env.PRIMUSNEX_OAUTH_CLIENT_ID || '',
+        clientSecret: process.env.PRIMUSNEX_OAUTH_CLIENT_SECRET || '',
+      },
     },
   },
   ai: {
@@ -38,13 +66,17 @@ export const config = {
     appId: process.env.GITHUB_APP_ID || '',
     privateKeyPath: process.env.GITHUB_APP_PRIVATE_KEY_PATH || '',
   },
+  gitlab: {
+    token: process.env.GITLAB_TOKEN || '',
+    baseUrl: process.env.GITLAB_BASE_URL || 'https://gitlab.com/api/v4',
+  },
   ssh: {
     keyPath: process.env.SSH_KEY_PATH || path.join(process.env.HOME || '/root', '.ssh', 'id_rsa'),
     knownHostsPath: process.env.SSH_KNOWN_HOSTS_PATH || path.join(process.env.HOME || '/root', '.ssh', 'known_hosts'),
   },
   security: {
     allowedDomains: (process.env.ALLOWED_DOMAINS || 'localhost,127.0.0.1').split(',').map(d => d.trim()),
-    allowedPaths: (process.env.ALLOWED_PATHS || '/tmp').split(',').map(p => p.trim()),
+    allowedPaths: (process.env.ALLOWED_PATHS || '/home,/tmp,/var/mcp').split(',').map(p => p.trim()),
     allowedApps: (process.env.ALLOWED_APPS || 'bash,python3,node,git').split(',').map(a => a.trim()),
     killSwitchEnabled: process.env.KILL_SWITCH_ENABLED === 'true',
     killSwitchToken: process.env.KILL_SWITCH_TOKEN || '',

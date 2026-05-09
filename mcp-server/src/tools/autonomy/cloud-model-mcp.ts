@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getTool, getToolNames, registerTool } from '../../registry';
+import { config } from '../../utils/config';
 
 type ToolInput = Record<string, unknown>;
 
@@ -33,6 +34,26 @@ interface SessionRecord {
   updatedAt: string;
 }
 
+interface McpServerRecord {
+  id: string;
+  url: string;
+  status: 'configured' | 'running' | 'stopped';
+  auth: {
+    mode: string;
+    header?: string;
+    bearer?: boolean;
+    basic?: boolean;
+    oauth?: {
+      authorizationUrl?: string;
+      tokenUrl?: string;
+      clientIdConfigured: boolean;
+      clientSecretConfigured: boolean;
+    };
+  };
+  capabilities: string[];
+  updatedAt: string;
+}
+
 const genericSchema = z.object({}).catchall(z.unknown());
 let sequence = 0;
 
@@ -50,6 +71,7 @@ const providers = new Map<string, ProviderRecord>([
 ]);
 const functionRegistry = new Map<string, FunctionRecord>();
 const mcpClientSessions = new Map<string, SessionRecord>();
+const mcpServers = new Map<string, McpServerRecord>();
 const toolRegistryState = new Map<string, ToolInput>();
 const genericNamespaceState = new Map<string, { id: string; history: Array<{ action: string; at: string; input: ToolInput }>; payload: ToolInput }>();
 
@@ -61,6 +83,26 @@ const modelCatalog = [
   { id: 'gemini-2.5-flash', provider: 'gemini', capabilities: ['chat', 'fast', 'multimodal'], contextWindow: 1000000 },
   { id: 'llama3.1:8b', provider: 'ollama', capabilities: ['chat', 'local', 'privacy'], contextWindow: 32768 },
 ];
+
+mcpServers.set('primusnex', {
+  id: 'primusnex',
+  url: config.auth.remoteProfiles.primusnex.mcpUrl,
+  status: 'configured',
+  auth: {
+    mode: 'api-key-or-oauth2',
+    header: config.auth.remoteProfiles.primusnex.apiKeyHeader,
+    bearer: true,
+    basic: false,
+    oauth: {
+      authorizationUrl: config.auth.remoteProfiles.primusnex.oauthAuthUrl,
+      tokenUrl: config.auth.remoteProfiles.primusnex.oauthTokenUrl,
+      clientIdConfigured: Boolean(config.auth.remoteProfiles.primusnex.clientId),
+      clientSecretConfigured: Boolean(config.auth.remoteProfiles.primusnex.clientSecret),
+    },
+  },
+  capabilities: ['tools', 'resources', 'prompts', 'oauth2', 'api-key'],
+  updatedAt: new Date().toISOString(),
+});
 
 function parseNameBlock(block: string): string[] {
   return block
@@ -1087,13 +1129,129 @@ function handleCloudAndModels(name: string, input: ToolInput): Record<string, un
 
 function handleMcpAndTooling(name: string, input: ToolInput): Record<string, unknown> {
   const now = new Date().toISOString();
+  if (name === 'mcp.server.add') {
+    const serverId = typeof input.id === 'string' ? input.id : `mcp-server-${Date.now()}-${++sequence}`;
+    const record: McpServerRecord = {
+      id: serverId,
+      url: typeof input.url === 'string' ? input.url : config.auth.remoteProfiles.primusnex.mcpUrl,
+      status: 'configured',
+      auth: {
+        mode: typeof input.auth_mode === 'string' ? input.auth_mode : 'api-key',
+        header: typeof input.header === 'string' ? input.header : typeof input.auth_header === 'string' ? input.auth_header : 'x-api-key',
+        bearer: input.bearer !== false,
+        basic: input.basic === true,
+        oauth: {
+          authorizationUrl: typeof input.authorization_url === 'string' ? input.authorization_url : typeof input.oauth_authorization_url === 'string' ? input.oauth_authorization_url : undefined,
+          tokenUrl: typeof input.token_url === 'string' ? input.token_url : typeof input.oauth_token_url === 'string' ? input.oauth_token_url : undefined,
+          clientIdConfigured: typeof input.client_id === 'string' && input.client_id.length > 0,
+          clientSecretConfigured: typeof input.client_secret === 'string' && input.client_secret.length > 0,
+        },
+      },
+      capabilities: ['tools', 'resources', 'prompts'],
+      updatedAt: now,
+    };
+    mcpServers.set(serverId, record);
+    return {
+      success: true,
+      server: record,
+      note: 'Secrets are accepted at runtime but never echoed back.',
+    };
+  }
+
+  if (name === 'mcp.server.remove') {
+    const serverId = typeof input.id === 'string' ? input.id : typeof input.server_id === 'string' ? input.server_id : '';
+    return { success: mcpServers.delete(serverId), server_id: serverId };
+  }
+
+  if (name === 'mcp.server.start' || name === 'mcp.server.stop' || name === 'mcp.server.restart') {
+    const serverId = typeof input.id === 'string' ? input.id : typeof input.server_id === 'string' ? input.server_id : Array.from(mcpServers.keys())[0];
+    const server = serverId ? mcpServers.get(serverId) : undefined;
+    if (!server) {
+      return { success: false, error: 'server_not_found', server_id: serverId };
+    }
+    server.status = name.endsWith('.stop') ? 'stopped' : 'running';
+    server.updatedAt = now;
+    return { success: true, server };
+  }
+
+  if (name === 'mcp.server.discover') {
+    return {
+      servers: Array.from(mcpServers.values()),
+      count: mcpServers.size,
+    };
+  }
+
+  if (name === 'mcp.server.config.read') {
+    const serverId = typeof input.id === 'string' ? input.id : typeof input.server_id === 'string' ? input.server_id : Array.from(mcpServers.keys())[0];
+    const server = serverId ? mcpServers.get(serverId) : undefined;
+    if (!server) {
+      return { success: false, error: 'server_not_found', server_id: serverId };
+    }
+    return {
+      success: true,
+      config: server,
+    };
+  }
+
+  if (name === 'mcp.server.config.write' || name === 'mcp.server.config.patch') {
+    const serverId = typeof input.id === 'string' ? input.id : typeof input.server_id === 'string' ? input.server_id : Array.from(mcpServers.keys())[0];
+    const server = serverId ? mcpServers.get(serverId) : undefined;
+    if (!server) {
+      return { success: false, error: 'server_not_found', server_id: serverId };
+    }
+    if (typeof input.url === 'string') {
+      server.url = input.url;
+    }
+    if (typeof input.auth_mode === 'string') {
+      server.auth.mode = input.auth_mode;
+    }
+    if (typeof input.auth_header === 'string' || typeof input.header === 'string') {
+      server.auth.header = (typeof input.auth_header === 'string' ? input.auth_header : input.header) as string;
+    }
+    server.updatedAt = now;
+    return { success: true, config: server };
+  }
+
   if (name === 'mcp.server.list_tools') {
     const names = getToolNames();
-    return { tools: names, count: names.length };
+    return {
+      tools: names,
+      count: names.length,
+      remote_servers: Array.from(mcpServers.values()).map((server) => ({ id: server.id, url: server.url, status: server.status })),
+    };
+  }
+
+  if (name === 'mcp.server.list_resources') {
+    return {
+      resources: Array.from(mcpServers.values()).map((server) => ({
+        server_id: server.id,
+        uri: `${server.url}#tools`,
+        auth_mode: server.auth.mode,
+      })),
+    };
+  }
+
+  if (name === 'mcp.server.list_prompts') {
+    return {
+      prompts: Array.from(mcpServers.values()).map((server) => ({
+        server_id: server.id,
+        name: `${server.id}.default`,
+        description: `Default prompt catalog for ${server.id}`,
+      })),
+    };
   }
 
   if (name === 'mcp.server.healthcheck' || name === 'mcp.server.core.healthcheck' || name === 'mcp.gateway.metrics') {
-    return { healthy: true, timestamp: now, registered_tools: getToolNames().length };
+    return {
+      healthy: true,
+      timestamp: now,
+      registered_tools: getToolNames().length,
+      servers: Array.from(mcpServers.values()).map((server) => ({
+        id: server.id,
+        status: server.status,
+        auth_mode: server.auth.mode,
+      })),
+    };
   }
 
   if (name === 'mcp.client.connect' || name === 'mcp.client.session_create') {
@@ -1253,4 +1411,3 @@ function registerExtendedTool(name: string): void {
 for (const name of allNames) {
   registerExtendedTool(name);
 }
-

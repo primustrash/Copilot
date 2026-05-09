@@ -7,6 +7,7 @@ import './tools/agent/index';
 import './tools/agent/tasks';
 import './tools/autonomy/index';
 import './tools/autonomy/cloud-model-mcp';
+import './tools/autonomy/dev-platform-tools';
 import './tools/workflow/index';
 import './tools/memory/index';
 import './tools/memory/project';

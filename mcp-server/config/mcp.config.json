@@ -46,12 +46,16 @@
   "auth": {
     "api_key": {
       "enabled": true,
-      "header": "X-API-Key"
+      "header": "X-API-Key",
+      "alternate_headers": ["API-Key", "X-Auth-Token"],
+      "bearer_enabled": true,
+      "basic_enabled": true
     },
     "oauth2": {
       "enabled": true,
       "auth_endpoint": "/auth/oauth",
-      "callback_endpoint": "/auth/callback"
+      "callback_endpoint": "/auth/callback",
+      "metadata_endpoint": "/.well-known/oauth-authorization-server"
     }
   },
   "rate_limit": {
