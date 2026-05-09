@@ -1620,10 +1620,10 @@ function extractLinks(html: string): string[] {
 }
 
 function extractText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
+  const plain = html.replace(/<[^>]*>/g, ' ');
+  return plain
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\s+/g, ' ')
     .trim();
 }
