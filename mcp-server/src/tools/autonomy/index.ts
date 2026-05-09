@@ -691,7 +691,8 @@ function applyAction(record: DynamicRecord, action: string, input: ToolInput): D
 
 function buildActionPayload(toolName: string, record: DynamicRecord, input: ToolInput): Record<string, unknown> {
   const action = toolName.split('.').pop() ?? toolName;
-  const namespace = toolName.slice(0, toolName.lastIndexOf('.'));
+  const namespaceSeparator = toolName.lastIndexOf('.');
+  const namespace = namespaceSeparator >= 0 ? toolName.slice(0, namespaceSeparator) : toolName;
 
   if (action === 'status') {
     return {
@@ -813,7 +814,8 @@ function registerGenericTool(name: string, category: string): void {
     handler: async (rawInput) => {
       const input = rawInput as ToolInput;
       const action = name.split('.').pop() ?? name;
-      const namespace = name.slice(0, name.lastIndexOf('.'));
+      const namespaceSeparator = name.lastIndexOf('.');
+      const namespace = namespaceSeparator >= 0 ? name.slice(0, namespaceSeparator) : name;
       const startsNewRecord = /(create|start|launch|boot|spawn|capture)$/.test(action);
       const record = startsNewRecord
         ? createRecord(namespace, input, action)
