@@ -1,0 +1,65 @@
+{
+  "name": "MCP Plug-and-Play Server",
+  "version": "1.0.0",
+  "description": "Full-featured MCP server with all tool categories for Linux",
+  "enabled_categories": [
+    "agent",
+    "workflow",
+    "memory",
+    "filesystem",
+    "desktop",
+    "audio",
+    "mouse",
+    "keyboard",
+    "apps",
+    "browser",
+    "shell",
+    "ai",
+    "monitoring",
+    "security",
+    "infra",
+    "repo",
+    "code",
+    "git",
+    "github",
+    "workspace",
+    "ide",
+    "ci",
+    "review",
+    "docs"
+  ],
+  "transport": {
+    "sse": {
+      "enabled": true,
+      "endpoint": "/mcp/sse",
+      "keepalive_interval_ms": 30000
+    },
+    "streamable_http": {
+      "enabled": true,
+      "endpoint": "/mcp/stream"
+    },
+    "json_rpc": {
+      "enabled": true,
+      "endpoint": "/mcp/tools/call"
+    }
+  },
+  "auth": {
+    "api_key": {
+      "enabled": true,
+      "header": "X-API-Key"
+    },
+    "oauth2": {
+      "enabled": true,
+      "auth_endpoint": "/auth/oauth",
+      "callback_endpoint": "/auth/callback"
+    }
+  },
+  "rate_limit": {
+    "window_ms": 60000,
+    "max_requests": 200
+  },
+  "sandbox": {
+    "timeout_ms": 30000,
+    "max_output_bytes": 1048576
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "tools": {
+    "agent": {
+      "enabled": true,
+      "tools": [
+        "register_agent", "list_agents", "get_agent_capabilities", "send_message",
+        "publish_event", "subscribe_topic", "create_handover", "accept_handover",
+        "get_context", "assign_task_to_agent", "route_to_model", "fast_reason",
+        "aggregate_results", "submit_result", "decompose_goal", "get_next_task",
+        "mark_task_done", "agent.create_task", "agent.run_task", "agent.pause_task",
+        "agent.resume_task", "agent.cancel_task", "agent.list_tasks", "agent.get_task_status",
+        "agent.spawn_parallel_task", "agent.join_parallel_tasks", "agent.create_plan",
+        "agent.update_plan", "agent.next_step", "agent.self_review",
+        "agent.retry_failed_step", "agent.summarize_progress", "agent.create_handoff",
+        "agent.accept_handoff"
+      ]
+    },
+    "workflow": {
+      "enabled": true,
+      "tools": [
+        "create_goal", "get_goal", "list_goals", "pause_goal", "resume_goal",
+        "cancel_goal", "tick_goal", "request_approval", "get_pending_approvals",
+        "approve_task", "reject_task", "planner.make_plan", "planner.next_action",
+        "planner.replan", "task.create", "task.update", "task.list",
+        "scheduler.run_at", "scheduler.run_every", "scheduler.pause",
+        "scheduler.resume", "scheduler.cancel", "autopilot.start", "autopilot.stop",
+        "autopilot.status", "autopilot.heartbeat", "autopilot.checkpoint",
+        "autopilot.rollback", "autopilot.escalate", "autopilot.sleep_until"
+      ]
+    },
+    "memory": {
+      "enabled": true,
+      "tools": [
+        "embed_text", "semantic_search", "upsert_memory", "memory.store",
+        "memory.retrieve", "memory.delete", "add_insight", "link_insights",
+        "search_insights", "create_session", "append_to_session", "get_session",
+        "close_session", "get_shared_context", "state.snapshot", "state.restore",
+        "journal.append", "report.generate", "memory.read_project_memory",
+        "memory.write_project_memory", "memory.update_project_memory",
+        "memory.read_user_preferences", "memory.write_user_preferences",
+        "memory.retrieve_relevant_context", "memory.store_solution_pattern",
+        "memory.store_error_pattern"
+      ]
+    },
+    "filesystem": {
+      "enabled": true,
+      "allowed_paths": ["/home", "/tmp", "/var/mcp"],
+      "max_file_size_mb": 100
+    },
+    "shell": {
+      "enabled": true,
+      "timeout_ms": 30000,
+      "blocked_commands": ["rm -rf /", "mkfs", "dd if=/dev/zero"]
+    },
+    "browser": {
+      "enabled": true,
+      "playwright_server": "ws://localhost:3001"
+    },
+    "ai": {
+      "enabled": true,
+      "providers": ["openai", "anthropic"]
+    },
+    "github": {
+      "enabled": true,
+      "api_base": "https://api.github.com"
+    }
+  }
+}
