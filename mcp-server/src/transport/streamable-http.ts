@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import { logger } from '../utils/logger';
 
 interface StreamSession {
@@ -11,7 +12,7 @@ interface StreamSession {
 const sessions = new Map<string, StreamSession>();
 
 export function createStreamSession(): string {
-  const sessionId = `stream-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const sessionId = `stream-${Date.now()}-${randomBytes(6).toString('hex')}`;
   sessions.set(sessionId, {
     id: sessionId,
     chunks: [],

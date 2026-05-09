@@ -71,7 +71,7 @@ export async function runSandboxed(
     const result = await Promise.race([
       execFileAsync(command, args, {
         cwd,
-        env: { ...process.env, ...env, PATH: process.env.PATH },
+        env: { ...process.env, ...env, PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
         maxBuffer: DEFAULT_MAX_OUTPUT,
       }),
       new Promise<never>((_, reject) =>

@@ -29,9 +29,10 @@ export function createServer(): express.Application {
   // Security headers
   app.use(helmet());
 
-  // CORS
+  // CORS - restrict to configured allowed origins
+  const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
   app.use(cors({
-    origin: '*',
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key'],
   }));

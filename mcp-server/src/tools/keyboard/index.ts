@@ -96,9 +96,19 @@ registerTool({
   schema: z.object({ content: z.string(), selection: z.enum(['clipboard', 'primary']).optional() }),
   handler: async (input) => {
     const { content, selection = 'clipboard' } = input as { content: string; selection?: string };
-    const args = selection === 'primary' ? ['-selection', 'primary', '-i'] : ['-selection', 'clipboard', '-i'];
-    const result = await runSandboxed('bash', ['-c', `echo -n "${content.replace(/"/g, '\\"')}" | xclip ${args.join(' ')}`], { timeout: 5000, cwd: '/tmp' });
-    return { success: result.exitCode === 0, content_length: content.length };
+    // Write content to a temp file and pipe it to xclip to avoid shell injection
+    const fs = await import('fs');
+    const tmpFile = `/tmp/clipboard-${Date.now()}.txt`;
+    try {
+      fs.writeFileSync(tmpFile, content, 'utf-8');
+      const selectionFlag = selection === 'primary' ? 'primary' : 'clipboard';
+      const result = await runSandboxed('bash', [
+        '-c', `cat -- "${tmpFile}" | xclip -selection ${selectionFlag} -i`
+      ], { timeout: 5000, cwd: '/tmp' });
+      return { success: result.exitCode === 0, content_length: content.length };
+    } finally {
+      try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+    }
   },
 });
 
