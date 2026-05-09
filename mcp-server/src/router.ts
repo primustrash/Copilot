@@ -118,6 +118,11 @@ export function handleKillSwitch(req: Request, res: Response): void {
   const token = req.headers['x-kill-switch-token'] as string;
   const { action } = req.body as { action: 'enable' | 'disable' };
 
+  if (!config.security.killSwitchToken) {
+    res.status(503).json({ error: 'Kill switch token is not configured' });
+    return;
+  }
+
   if (token !== config.security.killSwitchToken) {
     res.status(403).json({ error: 'Invalid kill switch token' });
     return;

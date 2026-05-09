@@ -40,17 +40,15 @@ async function main(): Promise<void> {
   logger.info('Starting MCP Server...');
 
   if (!config.auth.apiKeySecret) {
-    if (config.server.nodeEnv === 'production') {
-      throw new Error('API_KEY_SECRET must be configured in production');
-    }
-    logger.warn('API_KEY_SECRET is not configured; API key authentication will reject all static keys.');
+    throw new Error('API_KEY_SECRET must be configured before starting the server');
   }
 
   if (!config.auth.jwtSecret) {
-    if (config.server.nodeEnv === 'production') {
-      throw new Error('JWT_SECRET must be configured in production');
-    }
-    logger.warn('JWT_SECRET is not configured; JWT-based auth flows are disabled.');
+    throw new Error('JWT_SECRET must be configured before starting the server');
+  }
+
+  if (!config.security.killSwitchToken) {
+    throw new Error('KILL_SWITCH_TOKEN must be configured before starting the server');
   }
 
   const app = createServer();

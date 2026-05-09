@@ -1067,7 +1067,7 @@ async function handleAstOrLanguageTool(name: string, input: ToolInput): Promise<
     if (name.includes('rename_identifier')) {
       const oldName = String(input.old_name ?? input.from ?? '');
       const newName = String(input.new_name ?? input.to ?? '');
-      const next = content.replace(new RegExp(`\\b${escapeRegExp(oldName)}\\b`, 'g'), newName);
+      const next = content.replace(new RegExp(`\\b${escapeRegExp(oldName)}\\b`, 'g'), () => newName);
       fs.writeFileSync(filePath, next, 'utf-8');
       return { success: true, path: filePath, renamed: { from: oldName, to: newName } };
     }
