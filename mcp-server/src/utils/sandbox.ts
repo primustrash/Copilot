@@ -156,7 +156,7 @@ export async function runSandboxed(
       execFileAsync(fixedPath, args, {
         cwd,
         // Use only safe, hardcoded PATH - never inherit from process.env
-        env: { ...env, PATH: SAFE_PATH, HOME: process.env.HOME || '/root' },
+        env: { ...env, PATH: SAFE_PATH, HOME: '/root' },
         maxBuffer: DEFAULT_MAX_OUTPUT,
       }),
       new Promise<never>((_, reject) =>

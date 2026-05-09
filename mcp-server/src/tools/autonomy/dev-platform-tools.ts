@@ -932,6 +932,14 @@ function getTopLevelSymbols(sourceFile: ts.SourceFile): Array<{ name: string; ki
   return symbols;
 }
 
+function syntaxKindName(kind: number): string {
+  return ts.SyntaxKind[kind] ?? 'Unknown';
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function handleCodeTool(name: string, input: ToolInput): Promise<Record<string, unknown>> {
   const filePath = getFilePath(input);
   const content = fs.existsSync(filePath) ? readFileSafe(filePath) : '';
@@ -1054,12 +1062,12 @@ async function handleAstOrLanguageTool(name: string, input: ToolInput): Promise<
     const filePath = getFilePath(input);
     const content = readFileSafe(filePath);
     if (name === 'ast.parse') {
-      return { path: filePath, kind: ts.SyntaxKind[sourceFile.kind], symbols: getTopLevelSymbols(sourceFile) };
+      return { path: filePath, kind: syntaxKindName(sourceFile.kind), symbols: getTopLevelSymbols(sourceFile) };
     }
     if (name.includes('rename_identifier')) {
       const oldName = String(input.old_name ?? input.from ?? '');
       const newName = String(input.new_name ?? input.to ?? '');
-      const next = content.replace(new RegExp(`\\b${oldName}\\b`, 'g'), newName);
+      const next = content.replace(new RegExp(`\\b${escapeRegExp(oldName)}\\b`, 'g'), newName);
       fs.writeFileSync(filePath, next, 'utf-8');
       return { success: true, path: filePath, renamed: { from: oldName, to: newName } };
     }
@@ -1099,7 +1107,7 @@ async function handleAstOrLanguageTool(name: string, input: ToolInput): Promise<
         file: filePath,
         diagnostics: ts.getPreEmitDiagnostics(ts.createProgram([filePath], { allowJs: true, checkJs: true, noEmit: true }))
           .map((diag) => ({ message: ts.flattenDiagnosticMessageText(diag.messageText, '\n') })),
-        syntax_kind: ts.SyntaxKind[sourceFile.kind],
+        syntax_kind: syntaxKindName(sourceFile.kind),
       };
     }
     if (name === 'lsp.format' || name === 'lsp.organize_imports') {
