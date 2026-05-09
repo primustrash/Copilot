@@ -5,6 +5,7 @@ import { logger } from './utils/logger';
 // Import and register all tools
 import './tools/agent/index';
 import './tools/agent/tasks';
+import './tools/autonomy/index';
 import './tools/workflow/index';
 import './tools/memory/index';
 import './tools/memory/project';
