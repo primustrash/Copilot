@@ -61,6 +61,14 @@ export function createServer(): express.Application {
     message: { error: 'Too many requests', code: 'RATE_LIMIT_EXCEEDED' },
   });
   app.use('/mcp', limiter);
+  const authLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many authentication requests', code: 'AUTH_RATE_LIMIT_EXCEEDED' },
+  });
+  app.use('/auth', authLimiter);
 
   // Health check (no auth required)
   app.get('/health', (_req, res) => {
