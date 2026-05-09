@@ -31,6 +31,9 @@ export function createServer(): express.Application {
 
   // CORS - restrict to configured allowed origins
   const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+  if (allowedOrigins.length === 0) {
+    logger.warn('CORS_ALLOWED_ORIGINS not set - CORS is disabled. Set this env variable to allow cross-origin access.');
+  }
   app.use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

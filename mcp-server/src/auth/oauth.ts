@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
+import { randomBytes } from 'crypto';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
 
@@ -91,7 +92,7 @@ export async function handleOAuthRedirect(req: Request, res: Response): Promise<
 }
 
 export async function handleOAuthInitiate(_req: Request, res: Response): Promise<void> {
-  const state = Math.random().toString(36).substring(7);
+  const state = randomBytes(16).toString('hex');
   const authUrl = getOAuthAuthorizationUrl(state);
   res.json({ auth_url: authUrl, state });
 }

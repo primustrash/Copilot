@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import { logger } from '../utils/logger';
 
 interface SSEClient {
@@ -10,7 +11,7 @@ interface SSEClient {
 const clients = new Map<string, SSEClient>();
 
 export function setupSSE(req: Request, res: Response): string {
-  const clientId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const clientId = `${Date.now()}-${randomBytes(6).toString('hex')}`;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
