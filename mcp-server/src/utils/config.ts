@@ -23,8 +23,8 @@ export const config = {
     qdrantUrl: process.env.QDRANT_URL || 'http://localhost:6333',
   },
   auth: {
-    apiKeySecret: process.env.API_KEY_SECRET || 'default-secret-change-me',
-    jwtSecret: process.env.JWT_SECRET || 'default-jwt-secret-change-me',
+    apiKeySecret: process.env.API_KEY_SECRET || '',
+    jwtSecret: process.env.JWT_SECRET || '',
     jwtExpiry: process.env.JWT_EXPIRY || '1h',
     acceptedApiKeyHeaders: splitCsv(process.env.AUTH_API_KEY_HEADERS || 'x-api-key,api-key,x-auth-token'),
     allowBearerApiKey: process.env.AUTH_ALLOW_BEARER_API_KEY !== 'false',

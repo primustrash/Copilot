@@ -94,10 +94,16 @@ export async function getUserInfo(accessToken: string): Promise<OAuthUserInfo> {
 }
 
 export function generateJWT(payload: object): string {
+  if (!config.auth.jwtSecret) {
+    throw new Error('JWT secret is not configured');
+  }
   return jwt.sign(payload, config.auth.jwtSecret, { expiresIn: config.auth.jwtExpiry } as jwt.SignOptions);
 }
 
 export function verifyJWT(token: string): jwt.JwtPayload | string {
+  if (!config.auth.jwtSecret) {
+    throw new Error('JWT secret is not configured');
+  }
   return jwt.verify(token, config.auth.jwtSecret);
 }
 
