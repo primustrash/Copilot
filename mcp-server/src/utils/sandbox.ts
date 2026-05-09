@@ -101,6 +101,13 @@ const COMMAND_PATHS: Readonly<Record<string, string>> = {
   journalctl: '/usr/bin/journalctl',
   systemctl:  '/usr/bin/systemctl',
   docker:     '/usr/bin/docker',
+  psql:       '/usr/bin/psql',
+  mysql:      '/usr/bin/mysql',
+  mongosh:    '/usr/bin/mongosh',
+  'redis-cli':'/usr/bin/redis-cli',
+  kubectl:    '/usr/bin/kubectl',
+  terraform:  '/usr/bin/terraform',
+  helm:       '/usr/bin/helm',
 };
 
 const BLOCKED_PATTERNS = [
