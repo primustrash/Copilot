@@ -1,0 +1,29 @@
+{
+  "name": "mcp-presence-relay-addon",
+  "version": "0.1.0",
+  "description": "Plug-and-play MCP presence and remote command relay addon",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "presence",
+    "heartbeat",
+    "relay",
+    "remote-control"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^22.15.29"
+  }
+}
