@@ -1,29 +1,58 @@
-# mcp-presence-relay-addon
+# MCP Remote Orchestrator Addon
 
-Plug-and-play Addon für MCP-Server, um Teilnehmer/Clients sichtbar zu machen und stabile Befehlsübertragung zwischen Teilnehmern zu ermöglichen.
+Plug-and-play Addon für MCP-Server, das Teilnehmer-Discovery, Heartbeat-Status, sichere Task-Übertragung, Approval-Flow und Policy-Steuerung kombiniert.
 
-## Was das Addon bietet
+## Kernziele
 
-- Automatischer Presence-Sweep alle 15 Minuten (konfigurierbar)
-- Manueller Ping-Sweep für alle bekannten Teilnehmer
-- Teilnehmer-Registry inkl. Metadaten (`browser`, `cli`, `desktopapp`, `mobile`, ...)
-- Command-Queue mit TTL, Delivery-Status, Ack/Fail und Status-Abfrage
-- MCP-Tool-Registrierung über `registerMCPTools()`
+- Teilnehmer erkennen (Desktop, CLI, Browser, Mobile, Codex, Agenten)
+- Status zuverlässig melden (15-Minuten-Heartbeat + manueller Ping)
+- Befehle sicher als strukturierte Intents übertragen (keine offene Remote-Shell)
+- Ausführung mit Status/Progress/Logs/Ergebnis rückmelden
+- Sicherheit erzwingen (Rollen, Allowlist, Approval, Audit)
 
-## Schnellstart
+## Was implementiert ist
 
-```ts
-import { PresenceRelayAddon } from "mcp-presence-relay-addon";
+- In-Memory Registry für Teilnehmer inkl. Runtime-, Location- und Capability-Metadaten
+- Statusmodell: `online`, `stale`, `degraded`, `offline`, `blocked`, `busy`
+- 15-Minuten Sweep (konfigurierbar) + manueller Ping (einzeln/Broadcast)
+- Command Queue mit TTL, Delivery, Running/Progress, Completion, Cancellation
+- Approval-System (`pending/approved/rejected/expired`) für riskante Aktionen
+- Policy Engine mit:
+  - Intent-Allowlist / Blocklist
+  - Rollenbasierter Intent-Freigabe
+  - Risikoabhängiger Approval-Pflicht
+  - optionaler Workspace-Allowlist
+- Audit-Events für wichtige Aktionen
 
-const addon = new PresenceRelayAddon({
-  heartbeatIntervalMs: 15 * 60 * 1000,
-});
+## MCP Tool-Schnittstelle
 
-addon.start();
-addon.registerMCPTools(server, "presence_relay");
-```
+### Produkt-/Client-Tools
 
-## Registrierte Tools
+- `participants.list`
+- `participants.get`
+- `participants.ping`
+- `participants.capabilities`
+- `commands.send`
+- `commands.status`
+- `commands.cancel`
+- `commands.logs`
+- `approvals.request`
+- `approvals.resolve`
+- `policies.list`
+- `policies.update`
+
+### Agent-Runtime-Tools
+
+- `participants.register`
+- `participants.heartbeat`
+- `commands.fetch`
+- `commands.start`
+- `commands.progress`
+- `commands.complete`
+
+### Legacy-Kompatibilität
+
+Die bisherigen Toolnamen bleiben als Alias verfügbar:
 
 - `presence_relay.register_client`
 - `presence_relay.heartbeat`
@@ -34,12 +63,37 @@ addon.registerMCPTools(server, "presence_relay");
 - `presence_relay.ack_command`
 - `presence_relay.command_status`
 
-## Bestehende Lösungen (wenn verteilter Betrieb nötig ist)
+## Schnellstart
 
-Für Multi-Node/Cluster-Betrieb können später bestehende Lösungen unterlegt werden:
+```ts
+import { MCPRemoteOrchestrator } from "mcp-presence-relay-addon";
 
-- Redis Streams / PubSub (Queue + Presence-Verteilung)
-- NATS (leichtgewichtiges Messaging mit Ack-Patterns)
-- MQTT Broker (IoT/Device-lastige Topologien)
+const orchestrator = new MCPRemoteOrchestrator({
+  heartbeatIntervalMs: 15 * 60 * 1000,
+});
 
-Diese Basis-Implementierung ist absichtlich ohne externe Infrastruktur gehalten und kann direkt eingebaut werden.
+orchestrator.start();
+orchestrator.registerMCPTools(server); // registriert participants.*, commands.*, approvals.*, policies.*
+```
+
+Optional mit Prefix:
+
+```ts
+orchestrator.registerMCPTools(server, "remote");
+// -> remote.participants.list, remote.commands.send, ...
+```
+
+## Sicherheitsprinzipien
+
+- Keine freie Shell als Default; nur strukturierte `intent`-basierte Tasks
+- Blockierte Intents werden hart abgelehnt
+- Rollen prüfen send/cancel/policy/approval Aktionen
+- Risk-Level kann Approval erzwingen (`high`, `critical`)
+- Workspace-Zugriff kann per Allowlist eingeschränkt werden
+
+## Grenzen (MVP-Stand)
+
+- Persistenz ist aktuell In-Memory (kein PostgreSQL/Redis/NATS integriert)
+- Device-Agent-Prozess ist nicht Teil dieses Pakets, aber über Agent-Tools vorbereitet
+- Für echten Multi-Node-Betrieb empfiehlt sich externe Queue/DB (z. B. Redis + PostgreSQL)
+

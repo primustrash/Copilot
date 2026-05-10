@@ -39,4 +39,4 @@ Local secret files are stored under `.mcp/` and are intentionally ignored by Git
 
 ## Repository add-ons
 
-- `mcp-presence-relay-addon/` — plug-and-play MCP add-on for participant presence tracking (15-minute heartbeat + manual ping) and remote command relay with queue/ack/status.
+- `mcp-presence-relay-addon/` — **MCP Remote Orchestrator** add-on with participant registry, 15-minute heartbeat/ping, secure task queue, approvals, policies, and audit logging.
