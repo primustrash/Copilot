@@ -1,0 +1,15 @@
+cd5a0f5a8eaf78aa5b69ffb47e997f6d  .github/agents/codex-autonomous-loop-subagent.agent.md
+e4227e4333fd59dac78ce2a831d3d715  .github/agents/primusnex-max-autonomy-orchestrator-v1.agent.md
+1b2150c66b1f05bca0b13f5387b9b40e  .github/agents/primusnex-orchestrator-agent-v1.agent.md
+67517a64cb499300203415c7f03a2848  .github/agents/primusnex-parallel-execution-swarm-v1.agent.md
+acf9b4f27c002496335d371790988a7a  .github/agents/primusnex-research-agent-v1.agent.md
+a0fe3e651559b761534df26b704f4a32  .github/agents/primusnex-reverse-engineering-agent-v1.agent.md
+2eb8c45b3980800187e415e9e133285b  .github/copilot/mcp-config.template.json
+7ab5b8f701ed8632422b82f5aafb204e  .gitignore
+b06442c41c28ee6ea9efbf0088fc238c  .mcp/.env.example
+4b588458dd97716ff4e53bc92a2c3c0d  .mcp/.env.local
+6b6e9e754e5a16d0a470c63d94ea7bda  .mcp/mcp-config.local.json
+2eb8c45b3980800187e415e9e133285b  .vscode/mcp.example.json
+e53116acade9051e05b02249ae85656b  AGENT_FILES.md5
+9a6fe84859e732b00a8ae32e58b44904  MCP_SETUP.md
+1a65c8432e84643809452cf36dfafed6  README.md
