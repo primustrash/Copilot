@@ -196,6 +196,14 @@ async function withPg<T>(fn: (client: import('pg').PoolClient) => Promise<T>): P
   }
 }
 
+function stripSqlComments(sql: string): string {
+  return sql
+    .replace(/\/\*[\s\S]*?\*\//g, ' ') // /* ... */
+    .replace(/--[^\n]*/g, ' ')          // -- line comments
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 registerTool({
   name: 'db.query',
   description: 'Execute a read-only SQL SELECT query on PostgreSQL',
@@ -207,7 +215,7 @@ registerTool({
   handler: async (input) => {
     const { sql, params = [] } = input as { sql: string; params?: unknown[] };
 
-    const normalized = sql.trim().toLowerCase();
+    const normalized = stripSqlComments(sql).toLowerCase();
     if (!normalized.startsWith('select') && !normalized.startsWith('with')) {
       throw new Error('db.query only allows SELECT/WITH queries. Use db.execute for mutations.');
     }
@@ -234,9 +242,10 @@ registerTool({
   handler: async (input) => {
     const { sql, params = [] } = input as { sql: string; params?: unknown[] };
 
-    const normalized = sql.trim().toLowerCase();
-    if (normalized.startsWith('drop') || normalized.startsWith('truncate') || normalized.startsWith('create')) {
-      throw new Error('DDL statements (DROP/TRUNCATE/CREATE) are not allowed via db.execute for safety.');
+    const normalized = stripSqlComments(sql).toLowerCase();
+    const BLOCKED_DDL = ['drop ', 'truncate ', 'create ', 'alter ', 'grant ', 'revoke '];
+    if (BLOCKED_DDL.some(kw => normalized.includes(kw))) {
+      throw new Error('DDL statements (DROP/TRUNCATE/CREATE/ALTER/GRANT/REVOKE) are not allowed via db.execute.');
     }
 
     return withPg(async (client) => {

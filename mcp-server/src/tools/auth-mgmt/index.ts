@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createHash, randomBytes } from 'crypto';
+import { createHmac, randomBytes } from 'crypto';
 import { registerTool } from '../../registry';
 import { config } from '../../utils/config';
 import { logger } from '../../utils/logger';
@@ -19,7 +19,9 @@ interface ManagedApiKey {
 const managedKeys = new Map<string, ManagedApiKey>();
 
 function hashKey(raw: string): string {
-  return createHash('sha256').update(raw).digest('hex');
+  // HMAC-SHA256 keyed with the JWT_SECRET so hashes are secret-dependent
+  const secret = config.auth.jwtSecret || 'mcp-key-hash-secret';
+  return createHmac('sha256', secret).update(raw).digest('hex');
 }
 
 function generateKey(): string {
