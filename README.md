@@ -37,3 +37,6 @@ The agents are configured for the `mcp-primusnex-neu` SSE MCP server through the
 
 Local secret files are stored under `.mcp/` and are intentionally ignored by Git. See `MCP_SETUP.md`.
 
+## Repository add-ons
+
+- `mcp-presence-relay-addon/` — plug-and-play MCP add-on for participant presence tracking (15-minute heartbeat + manual ping) and remote command relay with queue/ack/status.

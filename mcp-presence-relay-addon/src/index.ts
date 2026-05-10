@@ -244,7 +244,7 @@ export class PresenceRelayAddon {
         },
         required: ["id", "channel"],
       },
-      execute: async (input) => this.registerOrUpdateClient(input as RegisterOrUpdateClientInput),
+      execute: async (input) => this.registerOrUpdateClient(input as unknown as RegisterOrUpdateClientInput),
     });
 
     server.registerTool({
@@ -298,7 +298,7 @@ export class PresenceRelayAddon {
         },
         required: ["fromClientId", "toClientId", "command"],
       },
-      execute: async (input) => this.sendCommand(input as SendCommandInput),
+      execute: async (input) => this.sendCommand(input as unknown as SendCommandInput),
     });
 
     server.registerTool({
@@ -312,7 +312,7 @@ export class PresenceRelayAddon {
         },
         required: ["clientId"],
       },
-      execute: async (input) => this.fetchPendingCommands(input as FetchPendingCommandsInput),
+      execute: async (input) => this.fetchPendingCommands(input as unknown as FetchPendingCommandsInput),
     });
 
     server.registerTool({
@@ -329,7 +329,7 @@ export class PresenceRelayAddon {
         },
         required: ["clientId", "commandId", "success"],
       },
-      execute: async (input) => this.ackCommand(input as AckCommandInput),
+      execute: async (input) => this.ackCommand(input as unknown as AckCommandInput),
     });
 
     server.registerTool({

@@ -1,0 +1,6 @@
+# Local MCP secrets
+.mcp/.env.local
+.mcp/mcp-config.local.json
+
+# Node dependencies
+**/node_modules/
