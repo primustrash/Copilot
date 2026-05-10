@@ -21,7 +21,7 @@ import {
   handlePromptsGet,
   handleKillSwitch,
 } from './router';
-import { getToolCount } from './registry';
+import { getToolCount, searchTools } from './registry';
 
 export function createServer(): express.Application {
   const app = express();
@@ -173,6 +173,48 @@ export function createServer(): express.Application {
       res.write(JSON.stringify({ type: 'error', error: (err as Error).message }) + '\n');
       res.end();
     }
+  });
+
+  // MCP Tool search endpoint
+  app.get('/mcp/tools/search', (req, res) => {
+    const { q } = req.query as { q?: string };
+    if (!q) {
+      res.status(400).json({ error: 'Missing query parameter: q' });
+      return;
+    }
+    const results = searchTools(q).map(t => ({ name: t.name, description: t.description, category: t.category }));
+    res.json({ query: q, results, count: results.length });
+  });
+
+  // Metrics endpoint with real system info
+  app.get('/mcp/metrics', (_req, res) => {
+    const mem = process.memoryUsage();
+    const os = require('os') as typeof import('os');
+    res.json({
+      server: {
+        uptime_seconds: process.uptime(),
+        tools: getToolCount(),
+        sse_clients: getConnectedClients(),
+        node_version: process.version,
+      },
+      process: {
+        pid: process.pid,
+        heap_used_mb: Math.round(mem.heapUsed / 1024 / 1024),
+        heap_total_mb: Math.round(mem.heapTotal / 1024 / 1024),
+        rss_mb: Math.round(mem.rss / 1024 / 1024),
+        external_mb: Math.round(mem.external / 1024 / 1024),
+      },
+      system: {
+        hostname: os.hostname(),
+        platform: os.platform(),
+        arch: os.arch(),
+        cpu_cores: os.cpus().length,
+        load_avg: os.loadavg(),
+        total_memory_mb: Math.round(os.totalmem() / 1024 / 1024),
+        free_memory_mb: Math.round(os.freemem() / 1024 / 1024),
+      },
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // Kill switch endpoint

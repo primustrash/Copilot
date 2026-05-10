@@ -62,6 +62,13 @@ export function getToolNames(): string[] {
   return Array.from(toolRegistry.keys());
 }
 
+export function searchTools(query: string): ToolDefinition[] {
+  const q = query.toLowerCase();
+  return Array.from(toolRegistry.values()).filter(
+    t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
+  );
+}
+
 // MCP-compatible tool list format
 export function getMCPToolList(): Array<{
   name: string;

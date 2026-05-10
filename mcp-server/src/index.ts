@@ -32,6 +32,13 @@ import './tools/ide/index';
 import './tools/ci/index';
 import './tools/review/index';
 import './tools/docs/index';
+import './tools/net/index';
+import './tools/db/index';
+import './tools/data/index';
+import './tools/notify/index';
+import './tools/process/index';
+import './tools/batch/index';
+import './tools/auth-mgmt/index';
 
 import { createServer } from './server';
 import { getToolCount } from './registry';
