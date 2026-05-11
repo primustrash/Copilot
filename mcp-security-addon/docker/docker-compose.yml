@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  mcp-security-addon:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: mcp-security-addon:latest
+    container_name: mcp-security-addon
+    restart: unless-stopped
+    # Expose SSE transport on port 4200 (optional; default is stdio)
+    ports:
+      - "4200:4200"
+    environment:
+      # Optional API keys — override via .env or docker secret
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - MOBSF_URL=${MOBSF_URL:-http://mobsf:8000}
+      - MOBSF_API_KEY=${MOBSF_API_KEY:-}
+    volumes:
+      # Persist screenshots, scan reports, and temporary output
+      - gowitness-data:/tmp/gowitness
+      - scoutsuite-reports:/tmp/scoutsuite-report
+    networks:
+      - mcp-security-net
+
+  # Optional MobSF side-car for mobile app analysis
+  mobsf:
+    image: opensecurity/mobile-security-framework-mobsf:latest
+    container_name: mobsf
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    networks:
+      - mcp-security-net
+    profiles:
+      - mobsf
+
+volumes:
+  gowitness-data:
+  scoutsuite-reports:
+
+networks:
+  mcp-security-net:
+    driver: bridge

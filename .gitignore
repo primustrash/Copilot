@@ -13,26 +13,26 @@ build/
 venv/
 .venv/
 env/
-
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
 # OS
 .DS_Store
 Thumbs.db
-
 # Environment
 .env
 .env.local
-
 # Config with secrets
 configs/local.yaml
-
 # Logs
 *.log
-
 # Test cache
 .pytest_cache/
+# Local secret files — never commit these
+.mcp/.env.local
+.mcp/mcp-config.local.json
+# Node.js build artifacts
+node_modules/
+# OS and editor noise
