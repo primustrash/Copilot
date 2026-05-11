@@ -1,0 +1,142 @@
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - MCP_PORT=3000
+      - MCP_HOST=0.0.0.0
+      - REDIS_URL=redis://redis:6379
+      - POSTGRES_URL=postgresql://mcpuser:${POSTGRES_PASSWORD:-mcppassword}@postgres:5432/mcpdb
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - mcp_workspaces:/var/mcp/workspaces
+      - mcp_sandboxes:/var/mcp/sandboxes
+      - mcp_logs:/var/log/mcp-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mcp_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: mcp-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mcp_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mcp-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mcpuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mcppassword}
+      POSTGRES_DB: mcpdb
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcpuser -d mcpdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mcp_network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: mcp-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mcp_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: mcp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_certs:/etc/ssl
+    depends_on:
+      - mcp-server
+    networks:
+      - mcp_network
+
+  playwright-server:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    container_name: mcp-playwright
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    command: ["npx", "playwright", "run-server", "--port", "3001", "--host", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mcp_network
+
+networks:
+  mcp_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+  qdrant_data:
+    driver: local
+  mcp_workspaces:
+    driver: local
+  mcp_sandboxes:
+    driver: local
+  mcp_logs:
+    driver: local
+  nginx_certs:
+    driver: local
