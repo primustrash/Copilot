@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+# Ensure helper jobs exist once.
+CRON_FILE="/etc/crontabs/root"
+grep -q 'wb01/run-backup.sh' "${CRON_FILE}" 2>/dev/null || \
+	echo '30 2 * * * /usr/libexec/wb01/run-backup.sh' >> "${CRON_FILE}"
+
+grep -q 'wb01/apply-mappings.sh' "${CRON_FILE}" 2>/dev/null || \
+	echo '*/5 * * * * /usr/libexec/wb01/apply-mappings.sh' >> "${CRON_FILE}"
+
+/etc/init.d/cron restart >/dev/null 2>&1 || true
+
+exit 0

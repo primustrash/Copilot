@@ -1,0 +1,17 @@
+config samba
+	option workgroup 'WORKGROUP'
+	option description 'WB01 USB Share'
+	option interface 'lan wg0'
+	option homes '0'
+	option disable_netbios '1'
+	option disable_ad_dc '1'
+	option disable_async_io '0'
+
+config sambashare
+	option name 'usbshare'
+	option path '/mnt/usbshare'
+	option read_only 'no'
+	option guest_ok 'no'
+	option create_mask '0660'
+	option dir_mask '0770'
+	option force_root '1'

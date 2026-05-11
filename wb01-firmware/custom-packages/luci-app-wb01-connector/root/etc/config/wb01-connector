@@ -1,0 +1,42 @@
+config tunnel
+	option enabled '1'
+	option mode 'tunnel_storage'
+	option transport 'wireguard'
+	option mtu '1380'
+	option persistent_keepalive '25'
+
+config acl
+	option policy 'allowlist_log_drop'
+	list trusted_servers '203.0.113.10'
+	list trusted_servers '203.0.113.11'
+	list trusted_servers '198.51.100.20'
+	list trusted_servers '198.51.100.21'
+
+config storage
+	option enabled '1'
+	option mountpoint '/mnt/usbshare'
+	option fstype 'ext4'
+	option samba_share '1'
+	option cloud_sync '1'
+
+config backup
+	option enabled '1'
+	option schedule 'daily'
+	option target '/mnt/usbshare/backups'
+	option retain '14'
+
+config updates
+	option auto_updates '0'
+	option maintenance_window 'Sun 02:30'
+	option allow_firmware_upgrade '1'
+	option channel 'stable'
+	option update_script '/usr/libexec/wb01/run-update.sh'
+
+config ipmap
+	option name 'example-bidi-01'
+	option direction 'bidirectional'
+	option local_ip '192.168.50.20'
+	option local_port '9100'
+	option cloud_ip '10.99.0.20'
+	option cloud_port '9100'
+	option enabled '0'
