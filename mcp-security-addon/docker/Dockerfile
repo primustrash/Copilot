@@ -37,8 +37,12 @@ RUN curl -fsSL https://go.dev/dl/go1.22.3.linux-amd64.tar.gz | tar -C /usr/local
 # ── Python tools ────────────────────────────────────────────────────────────────
 RUN pip3 install --no-cache-dir \
     sqlmap \
-    wpscan \
     arjun
+
+# ── Ruby tools ──────────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends ruby ruby-dev make gcc && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    gem install wpscan --no-document
 
 # ── Amass ───────────────────────────────────────────────────────────────────────
 RUN go install github.com/owasp-amass/amass/v4/...@latest

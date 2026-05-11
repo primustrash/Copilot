@@ -1,7 +1,4 @@
 import { exec as execCb, spawn } from "node:child_process";
-import { promisify } from "node:util";
-
-const execAsync = promisify(execCb);
 
 export interface ExecResult {
   stdout: string;
@@ -64,11 +61,14 @@ export async function runCommand(
 
 /**
  * Check whether a CLI tool is available in PATH.
+ * Uses spawn instead of a shell to avoid injection risks.
  */
 export async function toolAvailable(name: string): Promise<boolean> {
+  // Only allow simple alphanumeric tool names with hyphens/underscores
+  if (!/^[\w-]+$/.test(name)) return false;
   try {
-    await execAsync(`which ${name}`);
-    return true;
+    const result = await runCommand("which", [name], { timeoutMs: 5000 });
+    return result.exitCode === 0;
   } catch {
     return false;
   }

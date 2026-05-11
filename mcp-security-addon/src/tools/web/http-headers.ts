@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { runCommand, formatResult } from "../../util/exec.js";
 import { TimeoutSchema, sanitizeArg } from "../../util/validation.js";
 
 const SECURITY_HEADERS = [
@@ -27,7 +28,7 @@ export function registerHttpHeadersTools(server: McpServer): void {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeout_sec * 1000);
       try {
-        const resp = await fetch(sanitizeArg(url), {
+        const resp = await fetch(url, {
           method: "HEAD",
           redirect: "follow",
           signal: controller.signal,
@@ -66,8 +67,7 @@ export function registerHttpHeadersTools(server: McpServer): void {
       timeout_sec: TimeoutSchema,
     },
     async ({ url, method, timeout_sec }) => {
-      const { runCommand, formatResult } = await import("../../util/exec.js");
-      const args = ["-u", sanitizeArg(url), "-m", method];
+      const args = ["-u", url, "-m", method];
       const result = await runCommand("arjun", args, { timeoutMs: timeout_sec * 1000 });
       return { content: [{ type: "text", text: formatResult("arjun_param_discover", result) }] };
     }
