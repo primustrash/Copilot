@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mcp-primusnex-neu": {
+      "type": "sse",
+      "url": "https://mcp.primusnex.com/sse",
+      "headers": {
+        "Authorization": "Bearer ${COPILOT_MCP_PRIMUSNEX_TOKEN}"
+      }
+    }
+  }
+}

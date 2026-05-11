@@ -1,0 +1,13 @@
+# Local secret files — never commit these
+.mcp/.env.local
+.mcp/mcp-config.local.json
+
+# Node.js build artifacts
+node_modules/
+dist/
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

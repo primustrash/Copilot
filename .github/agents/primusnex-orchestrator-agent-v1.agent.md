@@ -5,6 +5,12 @@ target: github-copilot
 tools: ["*"]
 user-invocable: true
 disable-model-invocation: false
+mcp-servers:
+  mcp-primusnex-neu:
+    type: sse
+    url: https://mcp.primusnex.com/sse
+    headers:
+      Authorization: Bearer ${COPILOT_MCP_PRIMUSNEX_TOKEN}
 ---
 # PrimusNEX Orchestrator Agent
 
