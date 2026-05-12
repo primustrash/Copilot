@@ -1,0 +1,412 @@
+{
+  "name": "Copilot Codex Marketplace",
+  "version": "1.0.0",
+  "description": "Comprehensive marketplace of 2,500+ Codex plugins, MCP servers, and connectors across 50+ categories",
+  "author": "primustrash",
+  "repository": "https://github.com/primustrash/Copilot",
+  "homepage": "https://github.com/primustrash/Copilot",
+  "lastUpdated": "2026-05-12",
+  "categories": [
+    {
+      "id": "aggregators",
+      "name": "Aggregators & Meta-Servers",
+      "icon": "🔗",
+      "description": "Servers that aggregate multiple MCP servers or provide unified access to many tools",
+      "count": 60
+    },
+    {
+      "id": "aerospace",
+      "name": "Aerospace & Astrodynamics",
+      "icon": "🚀",
+      "description": "Space, astronomy, satellite, and aerospace engineering tools",
+      "count": 5
+    },
+    {
+      "id": "art-culture",
+      "name": "Art & Culture",
+      "icon": "🎨",
+      "description": "Art collections, museums, music, creative tools, and digital art generation",
+      "count": 150
+    },
+    {
+      "id": "architecture-design",
+      "name": "Architecture & Design",
+      "icon": "📐",
+      "description": "CAD, design tools, architecture planning, and technical drawing",
+      "count": 20
+    },
+    {
+      "id": "biology-medicine",
+      "name": "Biology, Medicine & Bioinformatics",
+      "icon": "🧬",
+      "description": "Medical data, genomics, bioinformatics, health records, clinical trials",
+      "count": 80
+    },
+    {
+      "id": "browser-automation",
+      "name": "Browser Automation",
+      "icon": "📂",
+      "description": "Control browsers, web scraping, automated testing, web interaction",
+      "count": 50
+    },
+    {
+      "id": "cloud-platforms",
+      "name": "Cloud Platforms",
+      "icon": "☁️",
+      "description": "AWS, Azure, GCP, cloud infrastructure management, serverless, containers",
+      "count": 100
+    },
+    {
+      "id": "code-execution",
+      "name": "Code Execution",
+      "icon": "👨‍💻",
+      "description": "Run code, execute scripts, sandboxed environments, REPLs",
+      "count": 40
+    },
+    {
+      "id": "coding-agents",
+      "name": "Coding Agents",
+      "icon": "🤖",
+      "description": "AI coding assistants, code generation, code review, refactoring",
+      "count": 75
+    },
+    {
+      "id": "command-line",
+      "name": "Command Line",
+      "icon": "🖥️",
+      "description": "Shell commands, terminal automation, CLI tools",
+      "count": 30
+    },
+    {
+      "id": "communication",
+      "name": "Communication",
+      "icon": "💬",
+      "description": "Email, chat, messaging, video conferencing",
+      "count": 120
+    },
+    {
+      "id": "conversational-ai",
+      "name": "Conversational AI",
+      "icon": "🗣️",
+      "description": "Chatbots, voice assistants, NLP, dialog systems",
+      "count": 60
+    },
+    {
+      "id": "customer-data",
+      "name": "Customer Data Platforms",
+      "icon": "👤",
+      "description": "CRM, customer data, marketing automation, user analytics",
+      "count": 70
+    },
+    {
+      "id": "databases",
+      "name": "Databases",
+      "icon": "🗄️",
+      "description": "SQL, NoSQL, database management, query execution",
+      "count": 90
+    },
+    {
+      "id": "data-platforms",
+      "name": "Data Platforms",
+      "icon": "📊",
+      "description": "Data warehouses, ETL, data pipelines, analytics",
+      "count": 85
+    },
+    {
+      "id": "delivery",
+      "name": "Delivery",
+      "icon": "🚚",
+      "description": "Package tracking, logistics, shipping APIs",
+      "count": 25
+    },
+    {
+      "id": "developer-tools",
+      "name": "Developer Tools",
+      "icon": "🛠️",
+      "description": "IDEs, version control, debugging, profiling",
+      "count": 110
+    },
+    {
+      "id": "data-science",
+      "name": "Data Science Tools",
+      "icon": "🧮",
+      "description": "Machine learning, data analysis, statistical computing",
+      "count": 95
+    },
+    {
+      "id": "data-visualization",
+      "name": "Data Visualization",
+      "icon": "📊",
+      "description": "Charts, graphs, dashboards, visual analytics",
+      "count": 55
+    },
+    {
+      "id": "embedded-systems",
+      "name": "Embedded Systems",
+      "icon": "📟",
+      "description": "IoT, microcontrollers, embedded programming",
+      "count": 35
+    },
+    {
+      "id": "education",
+      "name": "Education",
+      "icon": "🎓",
+      "description": "Learning management, educational content, online courses",
+      "count": 65
+    },
+    {
+      "id": "ecommerce",
+      "name": "E-Commerce",
+      "icon": "🛒",
+      "description": "Shopping, product catalogs, payment processing, order management",
+      "count": 80
+    },
+    {
+      "id": "environment-nature",
+      "name": "Environment & Nature",
+      "icon": "🌳",
+      "description": "Weather, climate data, environmental monitoring",
+      "count": 45
+    },
+    {
+      "id": "file-systems",
+      "name": "File Systems",
+      "icon": "📂",
+      "description": "File operations, storage, cloud storage, file management",
+      "count": 70
+    },
+    {
+      "id": "finance-fintech",
+      "name": "Finance & Fintech",
+      "icon": "💰",
+      "description": "Banking, payments, trading, cryptocurrency, financial data",
+      "count": 130
+    },
+    {
+      "id": "gaming",
+      "name": "Gaming",
+      "icon": "🎮",
+      "description": "Game development, gaming APIs, esports data",
+      "count": 50
+    },
+    {
+      "id": "home-automation",
+      "name": "Home Automation",
+      "icon": "🏠",
+      "description": "Smart home, IoT devices, home control systems",
+      "count": 40
+    },
+    {
+      "id": "knowledge-memory",
+      "name": "Knowledge & Memory",
+      "icon": "🧠",
+      "description": "Knowledge bases, memory systems, context management",
+      "count": 55
+    },
+    {
+      "id": "legal",
+      "name": "Legal",
+      "icon": "⚖️",
+      "description": "Legal documents, contract analysis, compliance",
+      "count": 30
+    },
+    {
+      "id": "location-services",
+      "name": "Location Services",
+      "icon": "🗺️",
+      "description": "Maps, geocoding, routing, location data",
+      "count": 45
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "icon": "🎯",
+      "description": "Marketing automation, analytics, advertising platforms",
+      "count": 75
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "icon": "📊",
+      "description": "Application monitoring, logging, observability",
+      "count": 60
+    },
+    {
+      "id": "multimedia-processing",
+      "name": "Multimedia Processing",
+      "icon": "🎥",
+      "description": "Video/audio processing, transcoding, media management",
+      "count": 70
+    },
+    {
+      "id": "os-automation",
+      "name": "OS Automation",
+      "icon": "🖥️",
+      "description": "Operating system automation, system administration",
+      "count": 50
+    },
+    {
+      "id": "product-management",
+      "name": "Product Management",
+      "icon": "📋",
+      "description": "Project management, task tracking, agile tools",
+      "count": 85
+    },
+    {
+      "id": "real-estate",
+      "name": "Real Estate",
+      "icon": "🏠",
+      "description": "Property data, real estate listings, market analysis",
+      "count": 35
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "icon": "🔬",
+      "description": "Scientific research, academic databases, citation management",
+      "count": 65
+    },
+    {
+      "id": "search-extraction",
+      "name": "Search & Data Extraction",
+      "icon": "🔎",
+      "description": "Web search, data extraction, information retrieval",
+      "count": 90
+    },
+    {
+      "id": "security",
+      "name": "Security",
+      "icon": "🔒",
+      "description": "Security scanning, vulnerability detection, penetration testing",
+      "count": 70
+    },
+    {
+      "id": "social-media",
+      "name": "Social Media",
+      "icon": "🌐",
+      "description": "Social platforms, content posting, analytics",
+      "count": 100
+    },
+    {
+      "id": "sports",
+      "name": "Sports",
+      "icon": "🏃",
+      "description": "Sports data, scores, statistics, athlete information",
+      "count": 40
+    },
+    {
+      "id": "support-service",
+      "name": "Support & Service Management",
+      "icon": "🎧",
+      "description": "Customer support, ticketing, service desk",
+      "count": 55
+    },
+    {
+      "id": "translation",
+      "name": "Translation Services",
+      "icon": "🌎",
+      "description": "Language translation, localization, multilingual support",
+      "count": 45
+    },
+    {
+      "id": "text-to-speech",
+      "name": "Text-to-Speech",
+      "icon": "🎧",
+      "description": "Speech synthesis, voice generation, audio output",
+      "count": 35
+    },
+    {
+      "id": "travel-transportation",
+      "name": "Travel & Transportation",
+      "icon": "🚆",
+      "description": "Travel booking, transportation APIs, route planning",
+      "count": 60
+    },
+    {
+      "id": "version-control",
+      "name": "Version Control",
+      "icon": "🔄",
+      "description": "Git, GitHub, GitLab, version control systems",
+      "count": 50
+    },
+    {
+      "id": "workplace-productivity",
+      "name": "Workplace & Productivity",
+      "icon": "🏢",
+      "description": "Office suites, productivity tools, collaboration platforms",
+      "count": 110
+    },
+    {
+      "id": "other-tools",
+      "name": "Other Tools & Integrations",
+      "icon": "🛠️",
+      "description": "Miscellaneous tools and specialized integrations",
+      "count": 95
+    }
+  ],
+  "stats": {
+    "totalConnectors": 2500,
+    "totalCategories": 50,
+    "languages": [
+      "TypeScript/JavaScript",
+      "Python",
+      "Go",
+      "Rust",
+      "C#",
+      "Java",
+      "C/C++",
+      "Ruby",
+      "PHP"
+    ],
+    "platforms": [
+      "macOS",
+      "Windows",
+      "Linux",
+      "Cloud",
+      "Local"
+    ],
+    "paymentModels": [
+      "Free/Open Source",
+      "API Key",
+      "OAuth",
+      "Paid/Subscription",
+      "Micropayments (x402/L402)"
+    ]
+  },
+  "featured": [
+    {
+      "name": "1mcp/agent",
+      "category": "aggregators",
+      "description": "Unified MCP server aggregating multiple servers into one interface",
+      "url": "https://github.com/1mcp-app/agent"
+    },
+    {
+      "name": "PipedreamHQ/pipedream",
+      "category": "aggregators",
+      "description": "Connect 2,500 APIs with 8,000+ prebuilt tools",
+      "url": "https://github.com/PipedreamHQ/pipedream"
+    },
+    {
+      "name": "juspay/neurolink",
+      "category": "aggregators",
+      "description": "Unifying 12 providers and 100+ models with multi-agent orchestration",
+      "url": "https://github.com/juspay/neurolink"
+    },
+    {
+      "name": "opentabs-dev/opentabs",
+      "category": "browser-automation",
+      "description": "100+ plugins giving AI agents access to web apps",
+      "url": "https://github.com/opentabs-dev/opentabs"
+    },
+    {
+      "name": "depwire/depwire",
+      "category": "coding-agents",
+      "description": "Dependency graph + 15 MCP tools for AI coding assistants",
+      "url": "https://github.com/depwire/depwire"
+    }
+  ],
+  "installation": {
+    "cli": "codex plugin marketplace add \"https://raw.githubusercontent.com/primustrash/Copilot/main/marketplace.json\"",
+    "documentation": "https://github.com/primustrash/Copilot/blob/main/CODEX_MARKETPLACE.md"
+  }
+}

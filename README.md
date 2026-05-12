@@ -10,6 +10,31 @@ These files are intentionally named with the current Copilot custom-agent conven
 
 `agent.md5` is not the Copilot custom-agent extension. If you require a `.md5` checksum file, generate it separately after editing the agent files.
 
+## 🔗 Codex Marketplace
+
+**NEW:** This repository now includes a comprehensive [Codex Plugin & Connector Marketplace](CODEX_MARKETPLACE.md) with **2,500+ connectors** across **50+ categories**!
+
+### What's Included?
+- 🔗 Meta-MCP servers and aggregators
+- 🎨 Art, design, and creative tools
+- ☁️ Cloud platforms and infrastructure
+- 🤖 AI coding agents and assistants
+- 🗄️ Databases and data platforms
+- 💰 Finance, crypto, and payment systems
+- 🌐 Social media and communication
+- 🛠️ Developer tools and utilities
+- ...and 42 more categories!
+
+### Quick Access
+- **Browse**: [CODEX_MARKETPLACE.md](CODEX_MARKETPLACE.md)
+- **Install**: Add marketplace source to Codex
+- **API**: [marketplace.json](marketplace.json)
+
+```bash
+codex plugin marketplace add \
+  "https://raw.githubusercontent.com/primustrash/Copilot/main/marketplace.json"
+```
+
 ## MCP integration
 
 Each agent uses:
