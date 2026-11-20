@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { logger } from './utils/logger';
+import { verifyGrant } from './utils/tool-grants';
 
 export interface ToolDefinition {
   name: string;
@@ -12,7 +13,32 @@ export interface ToolDefinition {
 const toolRegistry = new Map<string, ToolDefinition>();
 const categoryMap = new Map<string, string[]>();
 
+// Presence in the registry does NOT mean verified or authorized. These names
+// have been reviewed for passive, bounded behavior. Other legacy handlers stay
+// discoverable to operators but are not exposed for execution until rewritten.
+const VERIFIED_READ = new Set([
+  'shell.run', 'shell.run_sandboxed', 'process.list', 'env.get',
+  'get_metrics', 'proc.info', 'secrets.get', 'secrets.never_reveal',
+  'approval.check',
+]);
+const SCOPED_FILE_OPERATIONS = new Set([
+  'safe_file.create', 'safe_file.read', 'safe_file.replace', 'safe_file.delete',
+]);
+export interface InvocationApproval {
+  actorSha256?: string;
+  grant?: string;
+}
+export function toolAvailability(name: string): 'verified_read' | 'grant_required' | 'blocked' {
+  if (VERIFIED_READ.has(name)) return 'verified_read';
+  if (SCOPED_FILE_OPERATIONS.has(name)) return 'grant_required';
+  return 'blocked';
+}
+
+
 export function registerTool(tool: ToolDefinition): void {
+  if (toolRegistry.has(tool.name)) {
+    throw new Error('Duplicate MCP tool registration: ' + tool.name);
+  }
   toolRegistry.set(tool.name, tool);
 
   const existing = categoryMap.get(tool.category) || [];
@@ -40,7 +66,7 @@ export function listCategories(): string[] {
   return Array.from(categoryMap.keys());
 }
 
-export async function executeTool(name: string, input: unknown): Promise<unknown> {
+export async function executeTool(name: string, input: unknown, approval: InvocationApproval = {}): Promise<unknown> {
   const tool = toolRegistry.get(name);
   if (!tool) {
     throw new Error(`Tool not found: ${name}`);
@@ -51,6 +77,13 @@ export async function executeTool(name: string, input: unknown): Promise<unknown
     throw new Error(`Invalid input for tool ${name}: ${parsed.error.message}`);
   }
 
+  const availability = toolAvailability(name);
+  if (availability === 'blocked') {
+    throw new Error('Tool is blocked pending individual security verification');
+  }
+  if (availability === 'grant_required') {
+    verifyGrant(name, parsed.data, approval.actorSha256 || '', approval.grant || '');
+  }
   return tool.handler(parsed.data);
 }
 
@@ -65,7 +98,9 @@ export function getToolNames(): string[] {
 export function searchTools(query: string): ToolDefinition[] {
   const q = query.toLowerCase();
   return Array.from(toolRegistry.values()).filter(
-    t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) || t.category.toLowerCase().includes(q)
+    t => toolAvailability(t.name) !== 'blocked' &&
+      (t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q) ||
+       t.category.toLowerCase().includes(q))
   );
 }
 
@@ -75,7 +110,9 @@ export function getMCPToolList(): Array<{
   description: string;
   inputSchema: object;
 }> {
-  return Array.from(toolRegistry.values()).map(tool => ({
+  return Array.from(toolRegistry.values())
+    .filter(tool => toolAvailability(tool.name) !== 'blocked')
+    .map(tool => ({
     name: tool.name,
     description: tool.description,
     inputSchema: zodToJsonSchema(tool.schema),
