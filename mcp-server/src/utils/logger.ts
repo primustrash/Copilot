@@ -72,12 +72,19 @@ export const auditLogger = winston.createLogger({
   transports: auditTransports,
 });
 
-export function logToolExecution(tool: string, input: unknown, result: unknown, durationMs: number): void {
+export function logToolExecution(tool: string, _input: unknown, result: unknown, durationMs: number): void {
+  // Tool arguments, results and exceptions can contain credentials or PII.
+  // Log only bounded metadata, never their source values.
+  const safeName = /^[A-Za-z0-9_.:-]{1,100}$/.test(tool) ? tool : 'invalid-tool-id';
+  const failed = Boolean(
+    result && typeof result === 'object' &&
+    'isError' in result && (result as { isError?: unknown }).isError === true
+  );
   auditLogger.info('tool_executed', {
-    tool,
-    input,
-    result,
-    durationMs,
+    tool: safeName,
+    outcome: failed ? 'error' : 'completed',
+    durationMs: Number.isFinite(durationMs)
+      ? Math.max(0, Math.min(Math.round(durationMs), 3600000)) : null,
     timestamp: new Date().toISOString(),
   });
 }
