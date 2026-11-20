@@ -37,7 +37,8 @@ def test_workspace_scoped_file_write(tmp_path, monkeypatch):
     )
     assert result.startswith("Wrote approved workspace file")
     assert (tmp_path / "sub/note.txt").read_text() == "ok"
-    assert execute_tool("file_read", {"path": "sub/note.txt"}) == "ok"
+    assert "authorization required" in execute_tool("file_read", {"path": "sub/note.txt"})
+    assert execute_tool("file_read", {"path": "sub/note.txt"}, authorized=True) == "ok"
     assert "outside authorized workspace" in execute_tool(
         "file_write", {"path": "../outside.txt", "content": "bad"},
         authorized=True,
@@ -89,3 +90,56 @@ def test_runner_approval_is_exact_and_one_time(tmp_path, monkeypatch):
         run.assert_called_once_with(
             "python_exec", {"code": "print(1)"}, authorized=True
         )
+
+
+def test_read_tool_requires_real_per_call_approval(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "note.txt").write_text("public")
+    assert "authorization required" in execute_tool("file_read", {"path": "note.txt"})
+    assert execute_tool("file_read", {"path": "note.txt"}, authorized=True) == "public"
+
+
+def test_shell_rejects_dynamic_git_and_script_injection(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    for command in ("git -c alias.pwn=!sh pwn", "git commit -am backdoor",
+                    "ls -la; curl https://evil.invalid",
+                    "python3 -c 'print(1)'", "cat .env.local"):
+        result = execute_tool("shell_exec", {"command": command}, authorized=True)
+        assert "allowlist" in result, command
+    for op, args in (("commit", "-am unsafe"), ("checkout", "main"),
+                     ("status", "--porcelain=1")):
+        result = execute_tool("git_operations",
+                              {"operation": op, "args": args}, authorized=True)
+        assert "separate scoped write broker" in result
+
+
+def test_namespaced_process_group_is_killed_on_timeout(tmp_path, monkeypatch):
+    import subprocess
+    from copilot_agent.agent import _isolated
+    monkeypatch.chdir(tmp_path)
+    from unittest.mock import MagicMock
+    proc = MagicMock()
+    proc.pid = 198765
+    proc.wait.side_effect = [
+        subprocess.TimeoutExpired("bounded-command", 1),
+        -9,
+    ]
+    with patch("copilot_agent.agent.shutil.which", side_effect=lambda p: "/usr/bin/" + p), \
+         patch("copilot_agent.agent.subprocess.Popen", return_value=proc), \
+         patch("copilot_agent.agent.os.killpg") as kill:
+        try:
+            _isolated(["/usr/bin/true"], timeout=1)
+            raise AssertionError("Missing time-limit rejection")
+        except RuntimeError as err:
+            assert "exceeded time limit" in str(err)
+        kill.assert_called_once()
+        assert kill.call_args.args[0] == 198765
+        assert proc.wait.call_count == 2
+
+
+def test_sensitive_environment_variants_denied(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    for target in (".env.production", "credentials.json", "id_ed25519"):
+        result = execute_tool("file_write", {"path": target, "content": "x"},
+                              authorized=True)
+        assert "Sensitive path" in result
