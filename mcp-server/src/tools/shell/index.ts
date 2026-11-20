@@ -1,273 +1,193 @@
 import { z } from 'zod';
 import { registerTool } from '../../registry';
-import { runSandboxed } from '../../utils/sandbox';
+import { runSandboxed, validatePath } from '../../utils/sandbox';
 import { logger } from '../../utils/logger';
 import { config } from '../../utils/config';
-import { NodeSSH } from 'node-ssh';
-import fs from 'fs';
+
+
+/** Fixed, non-shell read-only catalog; models never construct executable strings. */
+const READ_ONLY_COMMANDS: Record<string, [string, string[]]> = {
+  'ps aux': ['ps', ['aux']],
+  'df -h': ['df', ['-h']],
+  'free -m': ['free', ['-m']],
+};
+async function readOnlyCommand(command: string, cwd = '/tmp', timeout = 10000) {
+  const selected = Object.prototype.hasOwnProperty.call(READ_ONLY_COMMANDS, command)
+    ? READ_ONLY_COMMANDS[command] : undefined;
+  if (!selected) throw new Error('Unapproved shell command: only read-only typed commands are accepted');
+  return runSandboxed(selected[0], selected[1], {
+    cwd: validatePath(cwd), timeout: Math.min(Math.max(timeout, 1), 10000),
+  });
+}
+function requireIsolatedWrite(name: string): never {
+  // The old execFile implementation offered neither a real authorization gate
+  // nor OS confinement. Do not silently run privileged operations as a model.
+  throw new Error(name + ' is disabled until a scoped approval and isolated worker are installed');
+}
 
 registerTool({
   name: 'shell.run',
-  description: 'Run a shell command',
+  description: 'Execute a fixed read-only system information command',
   category: 'shell',
   schema: z.object({
-    command: z.string(),
+    command: z.enum(['ps aux', 'df -h', 'free -m']),
     cwd: z.string().optional(),
-    timeout: z.number().optional(),
-    env: z.record(z.string()).optional(),
+    timeout: z.number().int().min(1).max(10000).optional(),
   }),
   handler: async (input) => {
-    const { command, cwd = '/tmp', timeout = 30000, env = {} } = input as {
-      command: string; cwd?: string; timeout?: number; env?: Record<string, string>;
-    };
-    logger.info('Shell command', { command, cwd });
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout, env });
+    const { command, cwd = '/tmp', timeout = 10000 } = input as { command: string; cwd?: string; timeout?: number };
+    const result = await readOnlyCommand(command, cwd, timeout);
     return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode };
   },
 });
-
 registerTool({
   name: 'shell.run_sandboxed',
-  description: 'Run a shell command in a sandboxed environment',
+  description: 'Read-only command catalog; not a generic shell sandbox',
   category: 'shell',
-  schema: z.object({ command: z.string(), timeout: z.number().optional() }),
+  schema: z.object({ command: z.enum(['ps aux', 'df -h', 'free -m']) }),
   handler: async (input) => {
-    const { command, timeout = 10000 } = input as { command: string; timeout?: number };
-    const result = await runSandboxed('bash', ['-c', command], { cwd: '/tmp', timeout });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode, sandboxed: true };
+    const { command } = input as { command: string };
+    const result = await readOnlyCommand(command);
+    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode, sandboxed: false };
   },
 });
-
 registerTool({
   name: 'shell.run_tests',
-  description: 'Run test suite for a project',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm test' } = input as { cwd: string; command?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout: 120000 });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode, passed: result.exitCode === 0 };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_tests'),
 });
-
 registerTool({
   name: 'shell.run_linter',
-  description: 'Run linter for a project',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm run lint' } = input as { cwd: string; command?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout: 60000 });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_linter'),
 });
-
 registerTool({
   name: 'shell.run_formatter',
-  description: 'Run formatter for a project',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm run format' } = input as { cwd: string; command?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout: 60000 });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_formatter'),
 });
-
 registerTool({
   name: 'shell.run_typecheck',
-  description: 'Run type checker for a project',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm run typecheck' } = input as { cwd: string; command?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout: 60000 });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_typecheck'),
 });
-
 registerTool({
   name: 'shell.run_build',
-  description: 'Build a project',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm run build' } = input as { cwd: string; command?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd, timeout: 300000 });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode, built: result.exitCode === 0 };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_build'),
 });
-
 registerTool({
   name: 'shell.run_dev_server',
-  description: 'Start development server',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ cwd: z.string(), command: z.string().optional(), port: z.number().optional() }),
-  handler: async (input) => {
-    const { cwd, command = 'npm run dev', port } = input as { cwd: string; command?: string; port?: number };
-    return {
-      started: true,
-      command,
-      cwd,
-      port: port || 3000,
-      message: 'Dev server starting in background',
-    };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.run_dev_server'),
 });
-
 registerTool({
   name: 'shell.stop_process',
-  description: 'Stop a running process by PID',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ pid: z.number(), signal: z.string().optional() }),
-  handler: async (input) => {
-    const { pid, signal = 'TERM' } = input as { pid: number; signal?: string };
-    const result = await runSandboxed('kill', [`-${signal}`, String(pid)], { timeout: 5000, cwd: '/tmp' });
-    return { success: result.exitCode === 0, pid, signal };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.stop_process'),
 });
-
 registerTool({
   name: 'shell.get_output',
-  description: 'Get output from a running command',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ command_id: z.string() }),
-  handler: async (input) => {
-    const { command_id } = input as { command_id: string };
-    return { command_id, output: '', status: 'unknown' };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.get_output'),
 });
-
 registerTool({
   name: 'shell.get_exit_code',
-  description: 'Get exit code of a completed command',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ command_id: z.string() }),
-  handler: async (input) => {
-    const { command_id } = input as { command_id: string };
-    return { command_id, exit_code: 0 };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('shell.get_exit_code'),
 });
-
 registerTool({
   name: 'process.list',
-  description: 'List running processes',
+  description: 'List running processes with a literal substring filter (no shell)',
   category: 'shell',
-  schema: z.object({ filter: z.string().optional() }),
+  schema: z.object({ filter: z.string().max(160).optional() }),
   handler: async (input) => {
     const { filter } = input as { filter?: string };
-    const cmd = filter ? `ps aux | grep ${filter}` : 'ps aux';
-    const result = await runSandboxed('bash', ['-c', cmd], { timeout: 10000, cwd: '/tmp' });
-    const processes = result.stdout.trim().split('\n').slice(1).map(line => {
+    const result = await readOnlyCommand('ps aux');
+    if (result.exitCode !== 0) throw new Error('Process listing failed');
+    const lines = result.stdout.trim().split('\n').slice(1)
+      .filter(line => !filter || line.includes(filter)).slice(0, 200);
+    return { processes: lines.map(line => {
       const parts = line.trim().split(/\s+/);
       return { user: parts[0], pid: parts[1], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ') };
-    });
-    return { processes, count: processes.length };
+    }), count: lines.length };
   },
 });
-
 registerTool({
   name: 'process.kill',
-  description: 'Kill a process by PID',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ pid: z.number(), signal: z.number().optional() }),
-  handler: async (input) => {
-    const { pid, signal = 15 } = input as { pid: number; signal?: number };
-    const result = await runSandboxed('kill', [`-${signal}`, String(pid)], { timeout: 5000, cwd: '/tmp' });
-    return { success: result.exitCode === 0, pid, signal };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('process.kill'),
 });
-
 registerTool({
   name: 'env.get',
-  description: 'Get environment variables',
+  description: 'Return only explicitly allowlisted non-secret metadata',
   category: 'shell',
-  schema: z.object({ key: z.string().optional() }),
+  schema: z.object({ key: z.enum(['PATH', 'LANG', 'NODE_ENV']).optional() }),
   handler: async (input) => {
     const { key } = input as { key?: string };
-    if (key) {
-      return { key, value: process.env[key] || null };
-    }
-    // Only expose safe env vars
-    const safe: Record<string, string | undefined> = {};
-    const safeKeys = ['PATH', 'HOME', 'USER', 'SHELL', 'LANG', 'NODE_ENV'];
-    for (const k of safeKeys) {
-      safe[k] = process.env[k];
-    }
-    return { env: safe };
+    const allowed = ['PATH', 'LANG', 'NODE_ENV'] as const;
+    if (key && !allowed.includes(key as typeof allowed[number])) throw new Error('Environment key not allowed');
+    if (key) return { key, value: process.env[key] || null };
+    const env: Record<string, string | undefined> = {};
+    for (const name of allowed) env[name] = process.env[name];
+    return { env };
   },
 });
-
 registerTool({
   name: 'env.set',
-  description: 'Set an environment variable for the current session',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ key: z.string(), value: z.string() }),
-  handler: async (input) => {
-    const { key, value } = input as { key: string; value: string };
-    process.env[key] = value;
-    return { success: true, key, value };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('env.set'),
 });
-
 registerTool({
   name: 'cron.create',
-  description: 'Create a cron job',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ schedule: z.string(), command: z.string() }),
-  handler: async (input) => {
-    const { schedule, command } = input as { schedule: string; command: string };
-    const result = await runSandboxed('bash', ['-c', `(crontab -l 2>/dev/null; echo "${schedule} ${command}") | crontab -`], {
-      timeout: 10000,
-      cwd: '/tmp',
-    });
-    return { success: result.exitCode === 0, schedule, command };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('cron.create'),
 });
-
 registerTool({
   name: 'logs.tail',
-  description: 'Tail a log file',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ file: z.string(), lines: z.number().optional() }),
-  handler: async (input) => {
-    const { file, lines = 100 } = input as { file: string; lines?: number };
-    const result = await runSandboxed('tail', ['-n', String(lines), file], { timeout: 10000, cwd: '/tmp' });
-    return { file, lines: result.stdout.trim().split('\n'), count: lines };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('logs.tail'),
 });
-
 registerTool({
   name: 'package.install',
-  description: 'Install a package using the system package manager',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ package: z.string(), manager: z.enum(['apt', 'npm', 'pip', 'cargo']).optional() }),
-  handler: async (input) => {
-    const { package: pkg, manager = 'apt' } = input as { package: string; manager?: string };
-    const commands: Record<string, string[]> = {
-      apt: ['apt-get', 'install', '-y', pkg],
-      npm: ['npm', 'install', '-g', pkg],
-      pip: ['pip3', 'install', pkg],
-      cargo: ['cargo', 'install', pkg],
-    };
-    const [cmd, ...args] = commands[manager] || ['echo', 'Unknown manager'];
-    const result = await runSandboxed(cmd, args, { timeout: 120000, cwd: '/tmp' });
-    return { success: result.exitCode === 0, package: pkg, manager };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('package.install'),
 });
-
 registerTool({
   name: 'run_shell',
-  description: 'Run a shell command (alias for shell.run)',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ command: z.string(), cwd: z.string().optional() }),
-  handler: async (input) => {
-    const { command, cwd = '/tmp' } = input as { command: string; cwd?: string };
-    const result = await runSandboxed('bash', ['-c', command], { cwd });
-    return { stdout: result.stdout, stderr: result.stderr, exit_code: result.exitCode };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('run_shell'),
 });
-
 registerTool({
   name: 'service_status',
   description: 'Get the status of a systemd service',
@@ -282,102 +202,39 @@ registerTool({
 
 registerTool({
   name: 'service_restart',
-  description: 'Restart a systemd service',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ service: z.string() }),
-  handler: async (input) => {
-    const { service } = input as { service: string };
-    const result = await runSandboxed('systemctl', ['restart', service], { timeout: 30000, cwd: '/tmp' });
-    return { success: result.exitCode === 0, service };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('service_restart'),
 });
-
 registerTool({
   name: 'ssh_exec',
-  description: 'Execute a command over SSH',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({
-    host: z.string(),
-    command: z.string(),
-    username: z.string().optional(),
-    port: z.number().optional(),
-  }),
-  handler: async (input) => {
-    const { host, command, username = 'root', port = 22 } = input as {
-      host: string; command: string; username?: string; port?: number;
-    };
-    const ssh = new NodeSSH();
-    try {
-      await ssh.connect({
-        host,
-        username,
-        port,
-        privateKey: fs.readFileSync(config.ssh.keyPath, 'utf-8'),
-      });
-      const result = await ssh.execCommand(command);
-      return { success: true, stdout: result.stdout, stderr: result.stderr, exit_code: result.code };
-    } finally {
-      ssh.dispose();
-    }
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('ssh_exec'),
 });
-
 registerTool({
   name: 'vps_ssh_execute',
-  description: 'Execute commands on a VPS via SSH',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({
-    host: z.string(),
-    commands: z.array(z.string()),
-    username: z.string().optional(),
-  }),
-  handler: async (input) => {
-    const { host, commands, username = 'root' } = input as { host: string; commands: string[]; username?: string };
-    const ssh = new NodeSSH();
-    const results: Array<{ command: string; stdout: string; stderr: string }> = [];
-    try {
-      await ssh.connect({
-        host,
-        username,
-        privateKey: fs.readFileSync(config.ssh.keyPath, 'utf-8'),
-      });
-      for (const cmd of commands) {
-        const result = await ssh.execCommand(cmd);
-        results.push({ command: cmd, stdout: result.stdout, stderr: result.stderr });
-      }
-    } finally {
-      ssh.dispose();
-    }
-    return { host, results };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('vps_ssh_execute'),
 });
-
 registerTool({
   name: 'trigger_pipeline',
-  description: 'Trigger a CI/CD pipeline',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ pipeline: z.string(), params: z.record(z.string()).optional() }),
-  handler: async (input) => {
-    const { pipeline, params } = input as { pipeline: string; params?: Record<string, string> };
-    return { success: true, pipeline, params, triggered_at: new Date().toISOString() };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('trigger_pipeline'),
 });
-
 registerTool({
   name: 'tail_logs',
-  description: 'Tail application logs',
+  description: 'Requires scoped high-impact authorization and isolated worker (fail closed)',
   category: 'shell',
-  schema: z.object({ service: z.string(), lines: z.number().optional() }),
-  handler: async (input) => {
-    const { service, lines = 50 } = input as { service: string; lines?: number };
-    const result = await runSandboxed('journalctl', ['-u', service, '-n', String(lines), '--no-pager'], {
-      timeout: 10000,
-      cwd: '/tmp',
-    });
-    return { service, logs: result.stdout.trim().split('\n') };
-  },
+  schema: z.object({}).passthrough(),
+  handler: async () => requireIsolatedWrite('tail_logs'),
 });
-
 registerTool({
   name: 'get_metrics',
   description: 'Get system metrics',
@@ -385,12 +242,12 @@ registerTool({
   schema: z.object({}),
   handler: async () => {
     const [cpu, mem, disk] = await Promise.all([
-      runSandboxed('bash', ['-c', "top -bn1 | grep 'Cpu(s)' | awk '{print $2}'"], { timeout: 5000, cwd: '/tmp' }),
+      runSandboxed('top', ['-bn1'], { timeout: 5000, cwd: '/tmp' }),
       runSandboxed('free', ['-m'], { timeout: 5000, cwd: '/tmp' }),
       runSandboxed('df', ['-h', '/'], { timeout: 5000, cwd: '/tmp' }),
     ]);
     return {
-      cpu_usage: cpu.stdout.trim(),
+      cpu_usage: (cpu.stdout.split('\n').find(line => line.includes('Cpu(s)')) || '').slice(0, 160),
       memory: mem.stdout,
       disk: disk.stdout,
       timestamp: new Date().toISOString(),
