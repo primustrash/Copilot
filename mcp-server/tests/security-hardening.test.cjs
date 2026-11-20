@@ -56,3 +56,22 @@ test('Sibling path prefix cannot bypass directory allowlist', () => {
   assert.throws(() => validatePath('/tmp-malicious/readme'), /outside approved roots/);
   assert.equal(validatePath('/tmp'), '/tmp');
 });
+
+test('Audit logs do not expose tool payloads or returned secrets', () => {
+  const { auditLogger, logToolExecution } = require('../dist/utils/logger');
+  const prior = auditLogger.info;
+  let recorded;
+  try {
+    auditLogger.info = (_event, data) => { recorded = data; };
+    logToolExecution('env.get', { key: 'OPENAI_API_KEY', token: 'secret-abc' },
+      { value: 'secret-abc', content: 'private' }, 18);
+  } finally {
+    auditLogger.info = prior;
+  }
+  assert.equal(recorded.tool, 'env.get');
+  assert.equal(recorded.outcome, 'completed');
+  assert.equal(recorded.durationMs, 18);
+  assert.equal('input' in recorded, false);
+  assert.equal('result' in recorded, false);
+  assert.equal(JSON.stringify(recorded).includes('secret-abc'), false);
+});
