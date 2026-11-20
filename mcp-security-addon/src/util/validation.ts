@@ -1,43 +1,58 @@
 import { z } from "zod";
+import { isIP } from "node:net";
 
-/** Validate that a string looks like a hostname, IP, or CIDR range. */
-export const TargetSchema = z
-  .string()
-  .min(1)
-  .regex(
-    /^[\w.\-/:]+$/,
-    "Target must be a hostname, IP address, or CIDR range"
-  );
-
-/** Validate a URL (http/https only). */
-export const UrlSchema = z.string().url().startsWith("http");
-
-/** Validate a port number. */
-export const PortSchema = z.number().int().min(1).max(65535);
-
-/** Validate a comma-separated port list like "80,443,8080" or a range "1-1024". */
-export const PortListSchema = z.string().regex(/^[\d,\-]+$/, "Invalid port list");
-
-/** Validate an optional timeout value in seconds. */
-export const TimeoutSchema = z.number().int().min(1).max(3600).default(120);
-
-/** Strip shell-dangerous characters from a string argument. */
-export function sanitizeArg(value: string): string {
-  return value.replace(/[;&|`$<>(){}\\'"]/g, "");
+/**
+ * Explicitly scoped network testing. No implicit home/LAN access.
+ * No DNS lookups here: only literal IPv4 targets pre-authorized by the
+ * server operator are accepted, preventing DNS rebinding for these tools.
+ * Caller-provided URL or scope parameters cannot expand the allowlist.
+ */
+export function isAuthorizedTarget(value: string): boolean {
+  if (typeof value !== "string" || isIP(value) !== 4) return false;
+  const allowlist = (process.env.SECURITY_ADDON_ALLOWED_TARGET_IPS || "")
+    .split(",").map(x => x.trim()).filter(Boolean);
+  if (!allowlist.length || allowlist.some(x => isIP(x) !== 4)) return false;
+  return allowlist.includes(value);
 }
 
-/** Build a flat array of CLI flags from an object of flag→value pairs. */
+export const TargetSchema = z.string().refine(
+  isAuthorizedTarget,
+  "Target is not an operator-approved literal IPv4 address"
+);
+
+export const UrlSchema = z.string().url().refine(value => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password &&
+      isAuthorizedTarget(url.hostname) && !url.hash;
+  } catch {
+    return false;
+  }
+}, "HTTPS URL must use an operator-approved literal IP (no DNS/credentials)");
+
+export const PortSchema = z.number().int().min(1).max(65535);
+export const PortListSchema = z.string().regex(/^\d{1,5}(?:[-,]\d{1,5})*$/, "Invalid port list")
+  .refine(value => value.split(/[,-]/).every(port => Number(port) >= 1 && Number(port) <= 65535),
+    "Invalid TCP port");
+
+export const TimeoutSchema = z.number().int().min(1).max(120).default(30);
+
+export function sanitizeArg(value: string): string {
+  if (!/^[A-Za-z0-9,._:/-]{1,255}$/.test(value)) {
+    throw new Error("Invalid argument characters");
+  }
+  return value;
+}
+
 export function buildFlags(
   flags: Record<string, string | number | boolean | undefined>
 ): string[] {
   const out: string[] = [];
   for (const [flag, value] of Object.entries(flags)) {
+    if (!/^--[A-Za-z0-9-]{1,50}$/.test(flag)) throw new Error("Unexpected option");
     if (value === undefined || value === false) continue;
-    if (value === true) {
-      out.push(flag);
-    } else {
-      out.push(flag, String(value));
-    }
+    if (value === true) out.push(flag);
+    else out.push(flag, sanitizeArg(String(value)));
   }
   return out;
 }
