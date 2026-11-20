@@ -6,7 +6,7 @@ process.env.AUDIT_LOG_FILE = '/tmp/aion-mcp-ci-audit.log';
 process.env.ALLOWED_PATHS = '/tmp,/var/mcp';
 delete process.env.MCP_ISOLATED_EXEC_ENABLED;
 
-const { executeTool, getTool } = require('../dist/registry');
+const { executeTool, getTool, toolAvailability, getMCPToolList } = require('../dist/registry');
 const { validatePath, runSandboxed } = require('../dist/utils/sandbox');
 require('../dist/tools/shell');
 
@@ -17,7 +17,7 @@ test('Command injection is rejected by the registered schema', async () => {
   );
   await assert.rejects(
     executeTool('run_shell', { command: 'echo unsafe' }),
-    /disabled until a scoped approval/
+    /blocked pending individual security verification/
   );
   await assert.rejects(
     runSandboxed('bash', ['-c', 'echo attacker']),
@@ -48,7 +48,7 @@ test('Unscoped writes and remote execution are fail closed', async () => {
     'package.install', 'shell.run_build', 'process.kill', 'trigger_pipeline'
   ]) {
     assert.ok(getTool(name), 'tool registration missing: ' + name);
-    await assert.rejects(executeTool(name, {}), /disabled until a scoped approval/, name);
+    await assert.rejects(executeTool(name, {}), /blocked pending individual security verification/, name);
   }
 });
 
@@ -74,4 +74,23 @@ test('Audit logs do not expose tool payloads or returned secrets', () => {
   assert.equal('input' in recorded, false);
   assert.equal('result' in recorded, false);
   assert.equal(JSON.stringify(recorded).includes('secret-abc'), false);
+});
+
+
+test('Legacy unsafe modules cannot self-enable through the registry', async () => {
+  for (const name of ['write_file','fs.write_file','secrets.get_raw','net.fetch','policy.set',
+                      'proc.kill','cron.create','run_shell']) {
+    assert.equal(toolAvailability(name), 'blocked', name);
+    await assert.rejects(executeTool(name, {}), /blocked pending individual security verification|Tool not found/);
+  }
+  assert.equal(toolAvailability('safe_file.create'), 'grant_required');
+  assert.equal(toolAvailability('shell.run'), 'verified_read');
+  assert.equal(getMCPToolList().some(t => t.name === 'write_file'), false);
+});
+
+test('Explicit readonly secret metadata cannot leak arbitrary credentials', async () => {
+  require('../dist/tools/security');
+  const r = await executeTool('secrets.get', {secret_name:'OPENAI_API_KEY'});
+  assert.equal('found' in r, true);
+  assert.equal(r.value === undefined || r.value === null || r.value === '***REDACTED***', true);
 });
