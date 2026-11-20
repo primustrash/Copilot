@@ -11,9 +11,11 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
     return;
   }
 
-  const { tool, input } = req.body as { tool: string; input: unknown };
+  const body = req.body as { tool?: unknown; input?: unknown } | undefined;
+  const tool = body?.tool;
+  const input = body?.input;
 
-  if (!tool) {
+  if (typeof tool !== 'string' || !/^[A-Za-z0-9_.:-]{1,120}$/.test(tool)) {
     res.status(400).json({ error: 'Missing "tool" field in request body' });
     return;
   }
@@ -21,7 +23,7 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
   const startTime = Date.now();
 
   try {
-    logger.info('Tool call', { tool, input });
+    logger.info('Tool call', { tool });
     const result = await executeTool(tool, input ?? {});
     const duration = Date.now() - startTime;
 
@@ -34,13 +36,15 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
       timestamp: new Date().toISOString(),
     });
   } catch (err: unknown) {
-    const error = err as Error;
     const duration = Date.now() - startTime;
-    logger.error('Tool execution failed', { tool, error: error.message });
+    // Never log the error string or raw arguments: validation libraries and
+    // downstream executors can echo tokens and personally identifying data.
+    logger.warn('Tool call rejected', { tool, duration_ms: duration });
 
     res.status(400).json({
       tool,
-      error: error.message,
+      error: 'Tool request rejected or failed',
+      code: 'TOOL_REQUEST_FAILED',
       duration_ms: duration,
       timestamp: new Date().toISOString(),
     });
