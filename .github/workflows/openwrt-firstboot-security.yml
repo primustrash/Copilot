@@ -1,0 +1,22 @@
+name: OpenWrt firstboot security
+on:
+  pull_request:
+    paths:
+      - 'scripts/openwrt-firstboot-hardening.sh'
+      - 'tests/test_openwrt_firstboot_security.py'
+      - '.github/workflows/openwrt-firstboot-security.yml'
+  push:
+    branches:
+      - 'codex/create-enhanced-firmware-for-creality-box-v2'
+permissions:
+  contents: read
+jobs:
+  shell-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: POSIX shell syntax
+        run: sh -n scripts/openwrt-firstboot-hardening.sh
+      - name: Security assertions
+        run: python3 -m unittest discover -s tests -p 'test_openwrt_firstboot_security.py' -v
