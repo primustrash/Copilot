@@ -37,3 +37,16 @@ The agents are configured for the `mcp-primusnex-neu` SSE MCP server through the
 
 Local secret files are stored under `.mcp/` and are intentionally ignored by Git. See `MCP_SETUP.md`.
 
+
+## Git-Befehle für die tägliche Arbeit
+
+Repository zunächst klonen: `git clone https://github.com/primustrash/Copilot.git`.
+Bei bereits vorhandenem Checkout zuerst `git status` prüfen. Anschließend mit
+`git pull --ff-only origin main` den lokalen Standardbranch aktualisieren;
+bei abweichenden eigenen Änderungen **nicht** blind zurücksetzen.
+
+Änderungen bevorzugt auf einem neuen Feature-Branch durchführen, Dateien
+gezielt auswählen (`git add README.md` statt ungeprüftem `git add .`),
+mit `git diff --cached` kontrollieren, danach committen und den eigenen
+Branch pushen. Auf geschützten Branches Änderungen per Pull Request und
+regulären Reviews integrieren. Niemals Zugangsdaten im Repository speichern.
