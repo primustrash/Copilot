@@ -1,37 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Verifies and extracts a TP-Link firmware ZIP in a reproducible way.
-# Usage:
-#   ./scripts/verify_tp_link_firmware.sh <firmware_zip>
-
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 <firmware_zip>" >&2
-  exit 1
+# No extraction/flash without a digest obtained independently from the OEM.
+# Usage: verify_tp_link_firmware.sh firmware.zip TRUSTED_SHA256 output_dir
+if [[ $# -ne 3 ]]; then
+  printf '%s\n' "Usage: $0 <firmware.zip> <independent_trusted_sha256> <new_output_dir>" >&2
+  exit 2
 fi
-
-ZIP_PATH="$1"
-if [[ ! -f "$ZIP_PATH" ]]; then
-  echo "File not found: $ZIP_PATH" >&2
-  exit 1
-fi
-
-OUT_DIR="$(dirname "$ZIP_PATH")/extracted_$(basename "$ZIP_PATH" .zip)"
-LOG_DIR="$(dirname "$ZIP_PATH")/verification_logs"
-mkdir -p "$OUT_DIR" "$LOG_DIR"
-
-SHA_FILE="$LOG_DIR/$(basename "$ZIP_PATH").sha256.txt"
-LIST_FILE="$LOG_DIR/$(basename "$ZIP_PATH").contents.txt"
-
-sha256sum "$ZIP_PATH" | tee "$SHA_FILE"
-unzip -l "$ZIP_PATH" | tee "$LIST_FILE"
-unzip -o "$ZIP_PATH" -d "$OUT_DIR" >/dev/null
-
-# quick inventory of extracted files
-find "$OUT_DIR" -maxdepth 2 -type f | sort
-
-echo
-echo "Verification artifacts:"
-echo "- SHA256: $SHA_FILE"
-echo "- Contents: $LIST_FILE"
-echo "- Extracted to: $OUT_DIR"
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+exec python3 "$ROOT/safe_verify_firmware_zip.py" "$1" \
+  --trusted-sha256 "$2" --output-dir "$3"
