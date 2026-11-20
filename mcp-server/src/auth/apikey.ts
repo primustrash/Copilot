@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../utils/config';
 import { logger } from '../utils/logger';
+import { fingerprintApiKey } from '../utils/tool-grants';
 import { introspectOAuthToken, verifyJWT } from './oauth';
 
 const VALID_API_KEYS = new Set<string>();
@@ -95,7 +96,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
   for (const headerName of config.auth.acceptedApiKeyHeaders) {
     const headerValue = getHeaderValue(req, headerName);
     if (headerValue && validateApiKey(headerValue)) {
-      (req as Request & { auth?: unknown }).auth = { method: 'api-key', header: headerName };
+      (req as Request & { auth?: unknown }).auth = { method: 'api-key', header: headerName, fingerprint: fingerprintApiKey(headerValue) };
       next();
       return;
     }
@@ -106,7 +107,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
   if (token && (scheme === 'bearer' || scheme === 'token' || scheme === 'apikey')) {
     const authResult = await authenticateToken(token, `${scheme}-token`);
     if (authResult) {
-      (req as Request & { auth?: unknown }).auth = authResult;
+      (req as Request & { auth?: unknown }).auth = { ...authResult, fingerprint: fingerprintApiKey(token) };
       next();
       return;
     }
@@ -116,7 +117,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
     const basic = extractBasicCredentials(authorization);
     const basicCandidate = [basic.password, basic.username].find((value): value is string => Boolean(value));
     if (basicCandidate && validateApiKey(basicCandidate)) {
-      (req as Request & { auth?: unknown }).auth = { method: 'basic', username: basic.username || 'api-key' };
+      (req as Request & { auth?: unknown }).auth = { method: 'basic', fingerprint: fingerprintApiKey(basicCandidate) };
       next();
       return;
     }
@@ -129,7 +130,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
       if (typeof tokenValue === 'string' && tokenValue.trim()) {
         const authResult = await authenticateToken(tokenValue.trim(), `query:${paramName}`);
         if (authResult) {
-          (req as Request & { auth?: unknown }).auth = authResult;
+          (req as Request & { auth?: unknown }).auth = { ...authResult, fingerprint: fingerprintApiKey(tokenValue.trim()) };
           next();
           return;
         }
@@ -144,7 +145,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
       if (typeof value === 'string' && value.trim()) {
         const authResult = await authenticateToken(value.trim(), `body:${fieldName}`);
         if (authResult) {
-          (req as Request & { auth?: unknown }).auth = authResult;
+          (req as Request & { auth?: unknown }).auth = { ...authResult, fingerprint: fingerprintApiKey(value.trim()) };
           next();
           return;
         }
@@ -159,7 +160,7 @@ export async function apiKeyMiddleware(req: Request, res: Response, next: NextFu
       if (value) {
         const authResult = await authenticateToken(value, `cookie:${cookieName}`);
         if (authResult) {
-          (req as Request & { auth?: unknown }).auth = authResult;
+          (req as Request & { auth?: unknown }).auth = { ...authResult, fingerprint: fingerprintApiKey(value) };
           next();
           return;
         }
