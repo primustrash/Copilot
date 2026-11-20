@@ -36,11 +36,11 @@ const COMMAND_PATHS: Readonly<Record<string, string>> = {
 
 const BWRAP = '/usr/bin/bwrap';
 const PRLIMIT = '/usr/bin/prlimit';
-const READ_ONLY: Readonly<Record<string, string[]>> = {
-  'ps': ['aux'],
-  'df': ['-h', '/'],
-  'free': ['-m'],
-  'top': ['-bn1'],
+const READ_ONLY: Readonly<Record<string, string[][]>> = {
+  'ps': [['aux']],
+  'df': [['-h'], ['-h', '/']],
+  'free': [['-m']],
+  'top': [['-bn1']],
 };
 const MAX_OUTPUT = 128 * 1024;
 const MAX_TIMEOUT_MS = 120000;
@@ -72,8 +72,8 @@ export function validatePath(filePath: string): string {
 
 function isPassiveCommand(cmd: string, args: string[]): boolean {
   const expected = READ_ONLY[cmd];
-  return Boolean(expected && expected.length === args.length &&
-    expected.every((value, index) => value === args[index]));
+  return Boolean(expected?.some(sequence => sequence.length === args.length &&
+    sequence.every((value, index) => value === args[index])));
 }
 
 function isolatedCommand(binary: string, args: string[], cwd: string): [string, string[]] {
