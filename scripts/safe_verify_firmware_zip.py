@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import stat
 import sys
 import zipfile
@@ -32,6 +33,14 @@ def check_zip(source: Path, expected_sha256: str, destination: Path) -> dict:
         raise ValueError("Firmware SHA-256 does not match independently trusted value")
     if destination.exists() or destination.is_symlink():
         raise ValueError("Destination exists; refusing overwrite")
+    # The operator must create and secure the destination's parent first;
+    # never follow a symlink hierarchy to an arbitrary extraction location.
+    parent = destination.parent
+    if not parent.is_dir():
+        raise ValueError("Destination parent must already be a directory")
+    for ancestor in (parent, *parent.parents):
+        if ancestor.is_symlink():
+            raise ValueError("Symlink in extraction destination ancestry")
 
     validated = []
     seen = set()
@@ -68,7 +77,7 @@ def check_zip(source: Path, expected_sha256: str, destination: Path) -> dict:
             raise ValueError("Corrupt archive member: " + bad_member)
 
         # Target is new and created only after all validations succeed.
-        destination.mkdir(parents=True, exist_ok=False, mode=0o700)
+        destination.mkdir(parents=False, exist_ok=False, mode=0o700)
         try:
             for entry, relative in validated:
                 target = destination.joinpath(*relative.parts)
@@ -89,7 +98,9 @@ def check_zip(source: Path, expected_sha256: str, destination: Path) -> dict:
                             raise ValueError("ZIP entry expanded beyond declared size")
                         output.write(block)
         except BaseException:
-            # Keep partial extraction for forensic analysis; never claim success.
+            # Never present partial extraction as a valid firmware bundle.
+            # Only the newly created output root is removed, not its parent.
+            shutil.rmtree(destination)
             raise
     return {"verified_sha256": actual.hexdigest(), "member_count": len(validated),
             "uncompressed_bytes": total, "destination": str(destination),
