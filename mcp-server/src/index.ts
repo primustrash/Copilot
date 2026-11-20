@@ -19,6 +19,7 @@ import './tools/keyboard/index';
 import './tools/apps/index';
 import './tools/browser/index';
 import './tools/shell/index';
+import './tools/scoped-files/index';
 import './tools/ai/index';
 import './tools/monitoring/index';
 import './tools/security/index';
