@@ -44,7 +44,7 @@ export function createServer(): express.Application {
   app.use(compression());
 
   // Request logging
-  app.use(morgan('combined', {
+  app.use(morgan(':method :status :res[content-length] :response-time ms', {
     stream: { write: (msg) => logger.info(msg.trim()) },
   }));
 
@@ -131,14 +131,13 @@ export function createServer(): express.Application {
   });
   app.get('/.well-known/oauth-authorization-server', handleOAuthMetadata);
 
-  // SSE endpoint (light auth)
+  // Authenticate before creating an SSE session. The old public SSE route
+  // bypassed the /mcp middleware entirely.
+  app.use('/mcp', apiKeyMiddleware);
   app.get('/mcp/sse', (req, res) => {
     const clientId = setupSSE(req, res);
-    logger.info('SSE connection established', { clientId });
+    logger.info('Authenticated SSE connection established', { clientId });
   });
-
-  // Apply API key auth to all /mcp routes
-  app.use('/mcp', apiKeyMiddleware);
 
   // MCP Protocol endpoints
   app.post('/mcp/tools/call', handleToolCall);
