@@ -4,6 +4,9 @@ import json
 import os
 import subprocess
 import sys
+import pathlib
+import shutil
+import shlex
 
 import requests
 
@@ -15,63 +18,99 @@ from copilot_agent.tools import get_tool_schemas
 # ---------------------------------------------------------------------------
 
 
-def _exec_shell(command, working_dir=None):
-    """Execute a shell command and return stdout/stderr.
+def _workspace():
+    root = pathlib.Path(os.environ.get("COPILOT_AGENT_WORKSPACE", os.getcwd())).resolve()
+    if not root.is_dir():
+        raise ValueError("Workspace does not exist")
+    return root
 
-    Note: This intentionally uses shell=True because the agent tool is
-    designed to run arbitrary user-approved shell commands. The agent loop
-    shows each command before execution so the user can interrupt.
-    """
-    if not isinstance(command, str) or not command.strip():
-        return "[error] Empty or invalid command."
-    result = subprocess.run(
-        command,
-        shell=True,
-        capture_output=True,
-        text=True,
-        cwd=working_dir,
-        timeout=120,
-    )
-    output = result.stdout
-    if result.stderr:
-        output += "\n[stderr]\n" + result.stderr
-    return output.strip()
+
+def _path(raw, allow_missing=False):
+    root = _workspace()
+    p = pathlib.Path(raw)
+    target = (p if p.is_absolute() else root / p).resolve(strict=not allow_missing)
+    if target != root and root not in target.parents:
+        raise PermissionError("Path outside authorized workspace")
+    parts = target.relative_to(root).parts
+    if any(part in (".git", ".ssh", ".mcp", ".env") or
+           part.endswith((".pem", ".key", ".token")) for part in parts):
+        raise PermissionError("Sensitive path is excluded")
+    return target
+
+
+def _isolated(argv, cwd=None, timeout=30):
+    """Fail closed without user-namespace isolation. No shell interpolation."""
+    bwrap = shutil.which("bwrap")
+    prlimit = shutil.which("prlimit")
+    if not bwrap or not prlimit:
+        raise RuntimeError("bubblewrap and prlimit required for command execution")
+    root = _workspace() if cwd is None else _path(cwd)
+    args = ["--unshare-all", "--die-with-parent", "--new-session",
+            "--clearenv", "--setenv", "PATH", "/usr/bin:/bin",
+            "--setenv", "HOME", "/tmp", "--tmpfs", "/tmp",
+            "--proc", "/proc", "--dev", "/dev", "--dir", "/etc"]
+    for lib in ("/usr", "/bin", "/lib", "/lib64"):
+        if os.path.exists(lib):
+            args.extend(("--ro-bind", lib, lib))
+    prefix = ""
+    for part in root.parts[1:-1]:
+        prefix += "/" + part
+        args.extend(("--dir", prefix))
+    args.extend(("--bind", str(root), str(root), "--chdir", str(root), "--",
+                 prlimit, "--as=1073741824", "--cpu=30", "--fsize=1048576",
+                 "--nofile=128", "--nproc=32", "--core=0", "--", *argv))
+    result = subprocess.run([bwrap, *args], cwd=root, capture_output=True,
+                            text=True, timeout=timeout, check=False,
+                            env={"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C"})
+    if len(result.stdout) + len(result.stderr) > 65536:
+        raise RuntimeError("Tool output exceeds 64 KiB")
+    if result.returncode:
+        return "[error] Isolated command exited " + str(result.returncode)
+    return (result.stdout + result.stderr).strip()
+
+
+def _exec_shell(command, working_dir=None):
+    argv = shlex.split(command)
+    if not argv or argv[0] not in ("git", "ls", "cat", "pytest", "python3", "ruff"):
+        raise PermissionError("Executable is not on the fixed allowlist")
+    if any(a in (";", "&&", "||", "|", ">", ">>", "<", "&") for a in argv):
+        raise PermissionError("Shell operators are forbidden")
+    return _isolated(argv, working_dir)
 
 
 def _exec_file_read(path):
-    """Read and return file contents."""
-    with open(path, "r") as f:
-        return f.read()
+    p = _path(path)
+    if not p.is_file() or p.stat().st_size > 1048576:
+        raise ValueError("Missing or oversized file")
+    return p.read_text(encoding="utf-8")
 
 
 def _exec_file_write(path, content):
-    """Write content to a file, creating directories as needed."""
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, "w") as f:
-        f.write(content)
-    return f"Written {len(content)} bytes to {path}"
+    if not isinstance(content, str) or len(content.encode("utf-8")) > 1048576:
+        raise ValueError("Invalid file content")
+    p = _path(path, allow_missing=True)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    _path(p.parent)
+    flags = os.O_CREAT | os.O_WRONLY | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(p, flags, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        stream.write(content)
+    return "Wrote approved workspace file: " + str(p.relative_to(_workspace()))
 
 
 def _exec_python(code):
-    """Execute Python code in a subprocess."""
-    result = subprocess.run(
-        [sys.executable, "-c", code],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    output = result.stdout
-    if result.stderr:
-        output += "\n[stderr]\n" + result.stderr
-    return output.strip()
+    if not isinstance(code, str) or len(code) > 16384:
+        raise ValueError("Invalid code")
+    return _isolated([sys.executable, "-I", "-c", code])
 
 
 def _exec_git(operation, args=None):
-    """Execute a Git operation."""
-    cmd = f"git {operation}"
+    if operation not in ("status", "diff", "log", "branch", "checkout", "commit"):
+        raise PermissionError("Git operation not permitted")
+    argv = ["git", "-c", "core.hooksPath=/dev/null", operation]
     if args:
-        cmd += f" {args}"
-    return _exec_shell(cmd)
+        argv += shlex.split(args)
+    return _isolated(argv)
 
 
 TOOL_EXECUTORS = {
@@ -83,7 +122,7 @@ TOOL_EXECUTORS = {
 }
 
 
-def execute_tool(name, arguments):
+def execute_tool(name, arguments, *, authorized=False):
     """Execute a tool by name with the given arguments.
 
     Args:
@@ -93,6 +132,8 @@ def execute_tool(name, arguments):
     Returns:
         Tool output string.
     """
+    if name != 'file_read' and authorized is not True:
+        return '[error] Per-call authorization required'
     executor = TOOL_EXECUTORS.get(name)
     if executor is None:
         return f"[error] Tool '{name}' has no local executor."
@@ -214,8 +255,19 @@ class AgentRunner:
                         args = json.loads(fn.get("arguments", "{}"))
                     except json.JSONDecodeError:
                         args = {}
-                    out(f"\n🔧 Tool call: {name}({json.dumps(args, indent=2)})")
-                    result = execute_tool(name, args)
+                    out(f"\\n🔧 Tool requested: {name} (arguments not logged)")
+                    approved = False
+                    if name == "file_read" and name in self.tool_names:
+                        approved = True
+                    elif name in self.tool_names and sys.stdin.isatty():
+                        try:
+                            answer = input(f"Approve this one {name} action? [y/N] ")
+                            approved = answer.strip().lower() in ("y", "yes")
+                        except (KeyboardInterrupt, EOFError):
+                            approved = False
+                    result = execute_tool(name, args, authorized=approved)
+                    if not approved:
+                        result = "[error] Denied: no verified per-call approval"
                     out(f"   ➜ {result[:500]}")
                     self.messages.append(
                         {
