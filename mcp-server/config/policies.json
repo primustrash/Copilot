@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "policies": {
+    "filesystem": {
+      "allowed_paths": ["/home", "/tmp", "/var/mcp"],
+      "max_file_size_mb": 100,
+      "blocked_extensions": [".exe", ".dll", ".so"],
+      "require_confirmation_for_delete": true
+    },
+    "network": {
+      "allowed_domains": ["localhost", "127.0.0.1", "api.github.com", "api.openai.com"],
+      "blocked_domains": ["malware.example.com"],
+      "max_requests_per_minute": 100
+    },
+    "shell": {
+      "timeout_ms": 30000,
+      "max_output_bytes": 1048576,
+      "blocked_commands": ["rm -rf /", "mkfs", ":(){ :|:& };:"],
+      "allowed_commands": ["bash", "sh", "python3", "node", "git", "npm"],
+      "require_approval_for": ["sudo", "systemctl", "apt", "curl | bash"]
+    },
+    "ai": {
+      "max_tokens_per_request": 4096,
+      "max_cost_per_request_usd": 0.10,
+      "blocked_topics": []
+    },
+    "agents": {
+      "max_parallel_tasks": 10,
+      "max_task_duration_minutes": 60,
+      "require_approval_for_destructive_actions": true
+    },
+    "security": {
+      "kill_switch_enabled": false,
+      "audit_all_actions": true,
+      "mask_secrets_in_logs": true
+    }
+  }
+}
