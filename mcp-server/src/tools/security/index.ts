@@ -67,16 +67,16 @@ registerTool({
 
 registerTool({
   name: 'secrets.get',
-  description: 'Get a secret value (masked in logs)',
+  description: 'Check whether a secret exists; never return secret values',
   category: 'security',
   schema: z.object({ secret_name: z.string() }),
   handler: async (input) => {
     const { secret_name } = input as { secret_name: string };
-    const value = secrets.get(secret_name);
-    if (!value) return { secret_name, found: false };
-    // Never log the actual secret
-    logger.info('Secret accessed', { secret_name });
-    return { secret_name, value, found: true };
+    // A model-visible tool must never return plaintext credentials, even if
+    // the operator previously provisioned an in-memory secret.
+    const exists = secrets.has(secret_name);
+    logger.info('Secret metadata checked', { exists });
+    return { secret_name, found: exists, value: exists ? '***REDACTED***' : null };
   },
 });
 
