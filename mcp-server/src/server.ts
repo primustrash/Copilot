@@ -156,20 +156,22 @@ export function createServer(): express.Application {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Transfer-Encoding', 'chunked');
 
-    const { tool, input } = req.body as { tool: string; input: unknown };
-    if (!tool) {
-      res.status(400).json({ error: 'Missing tool parameter' });
+    const body = req.body as { tool?: unknown; input?: unknown } | undefined;
+    const tool = body?.tool;
+    if (typeof tool !== 'string' || !/^[A-Za-z0-9_.:-]{1,120}$/.test(tool)) {
+      res.status(400).json({ error: 'Invalid tool parameter' });
       return;
     }
 
     try {
       const { executeTool } = await import('./registry');
-      res.write(JSON.stringify({ type: 'start', tool }) + '\n');
-      const result = await executeTool(tool, input ?? {});
+      const actorSha256 = (req as express.Request & { auth?: { fingerprint?: string } }).auth?.fingerprint || '';
+      const grant = req.get('x-mcp-tool-grant') || '';
+      const result = await executeTool(tool, body?.input ?? {}, { actorSha256, grant });
       res.write(JSON.stringify({ type: 'end', result }) + '\n');
       res.end();
-    } catch (err) {
-      res.write(JSON.stringify({ type: 'error', error: (err as Error).message }) + '\n');
+    } catch {
+      res.write(JSON.stringify({ type: 'error', error: 'Tool request rejected or failed' }) + '\n');
       res.end();
     }
   });
