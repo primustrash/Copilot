@@ -2,6 +2,7 @@ name: RE300 firmware intake security
 on:
   pull_request:
     paths:
+      - 'README.md'
       - 'scripts/verify_tp_link_firmware.sh'
       - 'scripts/safe_verify_firmware_zip.py'
       - 'tests/test_safe_firmware_zip.py'
