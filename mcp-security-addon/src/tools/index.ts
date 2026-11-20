@@ -1,66 +1,16 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerNmapTools } from "./recon/nmap.js";
 
-// Recon
-import {
-  registerNmapTools,
-  registerMasscanTools,
-  registerAmassTools,
-  registerAssetfinderTools,
-  registerHttpxTools,
-  registerGoWitnessTools,
-  registerKatanaTools,
-  registerDnsTools,
-  registerCrtshTools,
-} from "./recon/index.js";
-
-// Web
-import {
-  registerFfufTools,
-  registerSqlmapTools,
-  registerNucleiTools,
-  registerWpscanTools,
-  registerSslscanTools,
-  registerHttpHeadersTools,
-} from "./web/index.js";
-
-// Cloud
-import { registerScoutsuiteTools, registerKubectlTools } from "./cloud/index.js";
-
-// OSINT
-import { registerShodanTools, registerWaybackurlsTools } from "./osint/index.js";
-
-// Analysis
-import { registerMobsfTools } from "./analysis/index.js";
-
-/** Register ALL security tools on the given MCP server instance. */
+/**
+ * Security quarantine. The previous registration exposed dozens of active
+ * scanning, exploitation, cloud and direct-fetch tools with unbounded targets.
+ * Keep them compiled in the source tree for review, but do NOT register them
+ * until each has independently verified authorization, SSRF and target gates.
+ *
+ * Only two fixed-argument Nmap tools are available, both bound to the
+ * operator's literal IPv4 allowlist at schema and handler level.
+ * With no explicit SECURITY_ADDON_ALLOWED_TARGET_IPS, both reject all calls.
+ */
 export function registerAllSecurityTools(server: McpServer): void {
-  // ── Reconnaissance ──────────────────────────────────────────────────────────
   registerNmapTools(server);
-  registerMasscanTools(server);
-  registerAmassTools(server);
-  registerAssetfinderTools(server);
-  registerHttpxTools(server);
-  registerGoWitnessTools(server);
-  registerKatanaTools(server);
-  registerDnsTools(server);
-  registerCrtshTools(server);
-
-  // ── Web Application Testing ──────────────────────────────────────────────────
-  registerFfufTools(server);
-  registerSqlmapTools(server);
-  registerNucleiTools(server);
-  registerWpscanTools(server);
-  registerSslscanTools(server);
-  registerHttpHeadersTools(server);
-
-  // ── Cloud & Infrastructure ───────────────────────────────────────────────────
-  registerScoutsuiteTools(server);
-  registerKubectlTools(server);
-
-  // ── OSINT ────────────────────────────────────────────────────────────────────
-  registerShodanTools(server);
-  registerWaybackurlsTools(server);
-
-  // ── Mobile & Binary Analysis ─────────────────────────────────────────────────
-  registerMobsfTools(server);
 }
