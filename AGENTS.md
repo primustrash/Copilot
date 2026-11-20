@@ -1,34 +1,55 @@
 # AGENTS.md
 
-## Cursor Cloud specific instructions
+## Scope
 
-### Repository overview
+This repository contains GitHub Copilot custom-agent definitions and MCP
+integration documentation. There is no application build or service to run in
+this checkout; validate agent frontmatter and tracked documentation.
 
-This is a **configuration-only repository** containing GitHub Copilot custom agent definitions (`.agent.md` files) and MCP server configuration for PrimusNEX. There is no application code, no build system, no test suites, and no services to run locally.
+## Important paths
 
-### Key files
+- `.github/agents/*.agent.md`: Copilot agent profiles with YAML frontmatter
+- `MCP_SETUP.md`: required external MCP setup and credential policy
+- `README.md`: repository overview
+- `AGENT_FILES.md5`: checksums of tracked documentation and agent files
+- `.gitignore`: local credential exclusions; never bypass with `git add -f`
 
-- `.github/agents/*.agent.md` — 6 GitHub Copilot custom agent profile definitions with YAML frontmatter
-- `.github/agents/1.md` — alternate/draft agent definition (not in `.agent.md` naming convention)
-- `README.md` — top-level documentation
-- `MCP_SETUP.md` — MCP server configuration and security instructions
-- `AGENT_FILES.md5` — MD5 checksums (note: checksums may be stale relative to current file contents)
+## Development checks
 
-### Development workflow
+Run from repository root:
 
-Since this repo has no application code, "development" means editing the `.agent.md` files and documentation.
+```sh
+md5sum -c AGENT_FILES.md5
+python3 -m unittest discover -s tests -p 'test_agent_integrity.py' -v
+npx markdownlint-cli2 'AGENTS.md' 'README.md' 'MCP_SETUP.md' '.github/agents/*.agent.md'
+```
 
-**Lint:** Run `markdownlint-cli2 "**/*.md"` to check markdown quality. The existing files have pre-existing lint warnings (mostly line-length MD013 and multiple-blank-lines MD012) that are part of the current state of the repo.
+The explicit hidden-directory glob is important: a generic `**/*.md` glob may
+omit the `.github/agents` profiles. Existing Markdown lint warnings should be
+reported and fixed separately, not silently treated as clean.
 
-**Validate frontmatter:** Each `.agent.md` file must start with a YAML frontmatter block delimited by `---`. Required fields: `name`, `description`, `target`, `tools`, `user-invocable`, `disable-model-invocation`.
+Each `.agent.md` must have YAML frontmatter delimited by `---`. Check
+`name`, `description`, `target`, `tools`, `user-invocable` and
+`disable-model-invocation` as applicable to the current profile schema.
 
-**Checksum verification:** Run `md5sum -c AGENT_FILES.md5` to verify file integrity. Note that some files listed in `AGENT_FILES.md5` are gitignored (`.mcp/.env.local`, `.mcp/mcp-config.local.json`) or not present in the repository (`.gitignore`, `.github/copilot/mcp-config.template.json`, `.vscode/mcp.example.json`).
+`AGENT_FILES.md5` must contain only committed, existing files, never itself,
+missing examples, local secrets or credentials. Regenerate tracked-file
+checksums when the listed files change and verify them in CI.
 
-### External dependencies
+## External MCP setup (not automatic)
 
-The agents depend on the remote MCP server at `https://mcp.primusnex.com/sse` (authenticated via `COPILOT_MCP_PRIMUSNEX_TOKEN`). This is an external service and cannot be tested locally.
+Declaring `tools: ["*"]` does **not** install or authorize PrimusNEX MCP.
+An administrator must separately configure the `mcp-primusnex-neu` server
+(`https://mcp.primusnex.com/sse`) in the appropriate GitHub Copilot
+repository/organization settings and supply
+`COPILOT_MCP_PRIMUSNEX_TOKEN` through the platform's secret manager.
+Follow `MCP_SETUP.md`; validate the actual tool list and permissions in the
+running Copilot environment before using MCP-dependent operations.
 
-### Security notes
+## Security
 
-- Never commit secrets or tokens to agent files — see `MCP_SETUP.md` for the security policy.
-- Local secret files belong in `.mcp/` and are intentionally gitignored.
+Never commit, paste or log tokens, private keys, cookies or credentials.
+Local files under `.mcp/`, including `.env.local` and
+`mcp-config.local.json`, must remain untracked and ignored. Do not
+weaken permissions or bypass repository protection, reviews, and approval
+gates to make a tool work.
