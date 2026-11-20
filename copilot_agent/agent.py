@@ -32,50 +32,74 @@ def _path(raw, allow_missing=False):
     if target != root and root not in target.parents:
         raise PermissionError("Path outside authorized workspace")
     parts = target.relative_to(root).parts
-    if any(part in (".git", ".ssh", ".mcp", ".env") or
-           part.endswith((".pem", ".key", ".token")) for part in parts):
+    if any(part in (".git", ".ssh", ".mcp", "credentials.json", "secrets.json", "id_rsa", "id_ed25519") or
+           part.startswith(".env") or part.endswith((".pem", ".key", ".token")) for part in parts):
         raise PermissionError("Sensitive path is excluded")
     return target
 
 
 def _isolated(argv, cwd=None, timeout=30):
-    """Fail closed without user-namespace isolation. No shell interpolation."""
+    """Bounded process-group execution in a network-disabled OS namespace."""
+    import signal
+    import tempfile
+
     bwrap = shutil.which("bwrap")
     prlimit = shutil.which("prlimit")
     if not bwrap or not prlimit:
-        raise RuntimeError("bubblewrap and prlimit required for command execution")
-    root = _workspace() if cwd is None else _path(cwd)
+        raise RuntimeError("bubblewrap and prlimit required for isolated execution")
+    root = _workspace()
+    execution_dir = root if cwd is None else _path(cwd)
+    timeout = min(max(int(timeout), 1), 60)
     args = ["--unshare-all", "--die-with-parent", "--new-session",
             "--clearenv", "--setenv", "PATH", "/usr/bin:/bin",
             "--setenv", "HOME", "/tmp", "--tmpfs", "/tmp",
             "--proc", "/proc", "--dev", "/dev", "--dir", "/etc"]
-    for lib in ("/usr", "/bin", "/lib", "/lib64"):
-        if os.path.exists(lib):
-            args.extend(("--ro-bind", lib, lib))
+    for directory in ("/usr", "/bin", "/lib", "/lib64"):
+        if os.path.exists(directory):
+            args.extend(("--ro-bind", directory, directory))
     prefix = ""
-    for part in root.parts[1:-1]:
+    for part in execution_dir.parts[1:-1]:
         prefix += "/" + part
         args.extend(("--dir", prefix))
-    args.extend(("--bind", str(root), str(root), "--chdir", str(root), "--",
+    args.extend(("--bind", str(execution_dir), str(execution_dir),
+                 "--chdir", str(execution_dir), "--",
                  prlimit, "--as=1073741824", "--cpu=30", "--fsize=1048576",
                  "--nofile=128", "--nproc=32", "--core=0", "--", *argv))
-    result = subprocess.run([bwrap, *args], cwd=root, capture_output=True,
-                            text=True, timeout=timeout, check=False,
-                            env={"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C"})
-    if len(result.stdout) + len(result.stderr) > 65536:
-        raise RuntimeError("Tool output exceeds 64 KiB")
-    if result.returncode:
-        return "[error] Isolated command exited " + str(result.returncode)
-    return (result.stdout + result.stderr).strip()
+    with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+        process = subprocess.Popen(
+            [bwrap, *args], cwd=root, stdin=subprocess.DEVNULL,
+            stdout=stdout, stderr=stderr, start_new_session=True,
+            env={"PATH": "/usr/bin:/bin", "HOME": "/tmp", "LANG": "C"})
+        try:
+            code = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            # Kill the entire host-side process group, not just bubblewrap.
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
+            raise RuntimeError("Isolated process group exceeded time limit")
+        stdout.seek(0)
+        stderr.seek(0)
+        out = stdout.read(65537)
+        err = stderr.read(65537)
+        if len(out) > 65536 or len(err) > 65536:
+            raise RuntimeError("Isolated output exceeds 64 KiB")
+        if code:
+            return "[error] Isolated command exited " + str(code)
+        return (out + err).decode("utf-8", "replace").strip()
 
 
 def _exec_shell(command, working_dir=None):
-    argv = shlex.split(command)
-    if not argv or argv[0] not in ("git", "ls", "cat", "pytest", "python3", "ruff"):
-        raise PermissionError("Executable is not on the fixed allowlist")
-    if any(a in (";", "&&", "||", "|", ">", ">>", "<", "&") for a in argv):
-        raise PermissionError("Shell operators are forbidden")
-    return _isolated(argv, working_dir)
+    """Only exact, audited read-only command forms; no dynamic shell text."""
+    if not isinstance(command, str):
+        raise ValueError("Invalid command type")
+    allowed = {
+        "git status", "git status --short",
+        "git diff --stat", "git diff --name-only",
+        "git log -5 --oneline", "ls -la",
+    }
+    if command not in allowed:
+        raise PermissionError("Command not on the fixed read-only allowlist")
+    return _isolated(shlex.split(command), working_dir)
 
 
 def _exec_file_read(path):
@@ -101,16 +125,20 @@ def _exec_file_write(path, content):
 def _exec_python(code):
     if not isinstance(code, str) or len(code) > 16384:
         raise ValueError("Invalid code")
-    return _isolated([sys.executable, "-I", "-c", code])
+    return _isolated(["/usr/bin/python3", "-I", "-c", code])
 
 
 def _exec_git(operation, args=None):
-    if operation not in ("status", "diff", "log", "branch", "checkout", "commit"):
-        raise PermissionError("Git operation not permitted")
-    argv = ["git", "-c", "core.hooksPath=/dev/null", operation]
-    if args:
-        argv += shlex.split(args)
-    return _isolated(argv)
+    """This generic adapter is read-only; writes need a separate broker."""
+    commands = {
+        ("status", None): ["git", "status", "--short"],
+        ("diff", None): ["git", "diff", "--stat"],
+        ("log", None): ["git", "log", "-5", "--oneline"],
+    }
+    key = (operation, args or None)
+    if key not in commands:
+        raise PermissionError("Git operation requires a separate scoped write broker")
+    return _isolated(commands[key])
 
 
 
@@ -125,7 +153,7 @@ def _audit_tool_approval(name, approved):
         record = {"at": datetime.now(timezone.utc).isoformat(),
                   "tool": name, "approved": bool(approved)}
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
-            stream.write(json.dumps(record, sort_keys=True) + "\\n")
+            stream.write(json.dumps(record, sort_keys=True) + "\n")
     except OSError:
         # Never grant a tool operation based on whether audit storage succeeds.
         pass
@@ -150,7 +178,7 @@ def execute_tool(name, arguments, *, authorized=False):
     Returns:
         Tool output string.
     """
-    if name != 'file_read' and authorized is not True:
+    if authorized is not True:
         return '[error] Per-call authorization required'
     executor = TOOL_EXECUTORS.get(name)
     if executor is None:
@@ -275,9 +303,7 @@ class AgentRunner:
                         args = {}
                     out(f"\\n🔧 Tool requested: {name} (arguments not logged)")
                     approved = False
-                    if name == "file_read" and name in self.tool_names:
-                        approved = True
-                    elif name in self.tool_names and sys.stdin.isatty():
+                    if name in self.tool_names and sys.stdin.isatty():
                         try:
                             details = json.dumps(args, sort_keys=True, ensure_ascii=True)
                             if len(details) > 2400:
