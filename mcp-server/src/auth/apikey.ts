@@ -46,9 +46,13 @@ function parseCookieHeader(header: string | undefined): Record<string, string> {
   return header.split(';').reduce<Record<string, string>>((acc, part) => {
     const [rawKey, ...valueParts] = part.trim().split('=');
     if (!rawKey) return acc;
-    const key = decodeURIComponent(rawKey.trim());
-    const value = decodeURIComponent(valueParts.join('=').trim());
-    if (key) acc[key] = value;
+    try {
+      const key = decodeURIComponent(rawKey.trim());
+      const value = decodeURIComponent(valueParts.join('=').trim());
+      if (key) acc[key] = value;
+    } catch {
+      // Malformed cookie must not throw through the authentication middleware.
+    }
     return acc;
   }, {});
 }
@@ -83,8 +87,8 @@ async function authenticateToken(token: string, methodHint?: string): Promise<{ 
 
 export async function apiKeyMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   // Skip auth for health check and OAuth endpoints
-  const skipPaths = ['/health', '/auth/oauth', '/auth/callback', '/auth/methods', '/.well-known/oauth-authorization-server', '/mcp/sse'];
-  if (skipPaths.some(p => req.path.startsWith(p))) {
+  const skipPaths = new Set(['/health', '/auth/oauth', '/auth/callback', '/auth/methods', '/.well-known/oauth-authorization-server']);
+  if (skipPaths.has(req.path)) {
     return next();
   }
 
