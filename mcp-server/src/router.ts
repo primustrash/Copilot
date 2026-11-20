@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { executeTool, getMCPToolList, listCategories, listTools } from './registry';
+import { executeTool, getMCPToolList, listCategories, listTools, toolAvailability } from './registry';
 import { logger, logToolExecution } from './utils/logger';
 import { config } from './utils/config';
 
@@ -24,7 +24,9 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
 
   try {
     logger.info('Tool call', { tool });
-    const result = await executeTool(tool, input ?? {});
+    const actorSha256 = (req as Request & { auth?: { fingerprint?: string } }).auth?.fingerprint || '';
+    const grant = req.get('x-mcp-tool-grant') || '';
+    const result = await executeTool(tool, input ?? {}, { actorSha256, grant });
     const duration = Date.now() - startTime;
 
     logToolExecution(tool, input, result, duration);
@@ -63,7 +65,7 @@ export function handleCategoriesList(_req: Request, res: Response): void {
 
 export function handleCategoryTools(req: Request, res: Response): void {
   const { category } = req.params;
-  const tools = listTools(category);
+  const tools = listTools(category).filter(t => toolAvailability(t.name) !== 'blocked');
   res.json({ category, tools: tools.map(t => ({ name: t.name, description: t.description })) });
 }
 
