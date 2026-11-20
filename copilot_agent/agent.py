@@ -113,6 +113,24 @@ def _exec_git(operation, args=None):
     return _isolated(argv)
 
 
+
+def _audit_tool_approval(name, approved):
+    """Record one authorization decision, never parameters or tool output."""
+    try:
+        from datetime import datetime, timezone
+        base = pathlib.Path.home() / ".local" / "state" / "copilot-agent"
+        base.mkdir(parents=True, exist_ok=True, mode=0o700)
+        fd = os.open(base / "approvals.jsonl",
+                     os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+        record = {"at": datetime.now(timezone.utc).isoformat(),
+                  "tool": name, "approved": bool(approved)}
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, sort_keys=True) + "\\n")
+    except OSError:
+        # Never grant a tool operation based on whether audit storage succeeds.
+        pass
+
+
 TOOL_EXECUTORS = {
     "shell_exec": lambda **kw: _exec_shell(kw["command"], kw.get("working_dir")),
     "file_read": lambda **kw: _exec_file_read(kw["path"]),
@@ -271,8 +289,10 @@ class AgentRunner:
                             approved = answer.strip() == "APPROVE"
                         except (KeyboardInterrupt, EOFError, ValueError):
                             approved = False
-                    result = execute_tool(name, args, authorized=approved)
-                    if not approved:
+                    _audit_tool_approval(name, approved)
+                    if approved:
+                        result = execute_tool(name, args, authorized=True)
+                    else:
                         result = "[error] Denied: no verified per-call approval"
                     out(f"   ➜ {result[:500]}")
                     self.messages.append(
