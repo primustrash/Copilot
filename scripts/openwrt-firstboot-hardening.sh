@@ -40,12 +40,12 @@ rollback() {
 trap rollback EXIT
 
 # Keep password and root-password authentication OFF; require key auth.
+CHANGED=1
 uci set 'dropbear.@dropbear[0].enable=1'
 uci set 'dropbear.@dropbear[0].Interface=lan'
 uci set 'dropbear.@dropbear[0].PasswordAuth=off'
 uci set 'dropbear.@dropbear[0].RootPasswordAuth=off'
 uci set 'dropbear.@dropbear[0].RootLogin=on'
-CHANGED=1
 uci commit dropbear
 
 # SSH is only exposed after all key, permission, config and auth checks.
