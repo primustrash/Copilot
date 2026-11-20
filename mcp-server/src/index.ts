@@ -7,7 +7,6 @@ import './tools/agent/index';
 import './tools/agent/tasks';
 import './tools/autonomy/index';
 import './tools/autonomy/cloud-model-mcp';
-import './tools/autonomy/dev-platform-tools';
 import './tools/workflow/index';
 import './tools/memory/index';
 import './tools/memory/project';
@@ -40,6 +39,9 @@ import './tools/notify/index';
 import './tools/process/index';
 import './tools/batch/index';
 import './tools/auth-mgmt/index';
+// Register generic compatibility names LAST: their getTool() guard yields
+// precedence to independently implemented, stricter handlers.
+import './tools/autonomy/dev-platform-tools';
 
 import { createServer } from './server';
 import { getToolCount } from './registry';
