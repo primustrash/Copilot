@@ -20,8 +20,8 @@ from copilot_agent.tools import get_tool_schemas
 
 def _workspace():
     root = pathlib.Path(os.environ.get("COPILOT_AGENT_WORKSPACE", os.getcwd())).resolve()
-    if not root.is_dir():
-        raise ValueError("Workspace does not exist")
+    if not root.is_dir() or root in (pathlib.Path("/"), pathlib.Path("/tmp"), pathlib.Path.home()):
+        raise ValueError("Select a dedicated, existing project workspace")
     return root
 
 
@@ -261,9 +261,15 @@ class AgentRunner:
                         approved = True
                     elif name in self.tool_names and sys.stdin.isatty():
                         try:
-                            answer = input(f"Approve this one {name} action? [y/N] ")
-                            approved = answer.strip().lower() in ("y", "yes")
-                        except (KeyboardInterrupt, EOFError):
+                            details = json.dumps(args, sort_keys=True, ensure_ascii=True)
+                            if len(details) > 2400:
+                                raise ValueError("Tool arguments too long for safe interactive review")
+                            answer = input(
+                                f"Authorize EXACT {name} action with parameters: {details}\\n"
+                                "Type APPROVE (single use, anything else denies): "
+                            )
+                            approved = answer.strip() == "APPROVE"
+                        except (KeyboardInterrupt, EOFError, ValueError):
                             approved = False
                     result = execute_tool(name, args, authorized=approved)
                     if not approved:
