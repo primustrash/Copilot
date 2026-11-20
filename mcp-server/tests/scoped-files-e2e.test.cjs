@@ -16,6 +16,7 @@ const { createServer } = require('../dist/server');
 const { addApiKey, removeApiKey } = require('../dist/auth/apikey');
 const { getMCPToolList, executeTool } = require('../dist/registry');
 require('../dist/tools/scoped-files');
+require('../dist/tools/shell');
 const apiKey = 'phase2-scoped-files-api-key-only';
 const anotherKey = 'phase2-another-api-key';
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
