@@ -216,14 +216,39 @@ export function createServer(): express.Application {
     });
   });
 
-  // Kill switch endpoint
+  // All administrative routes require primary authentication. A secondary,
+  // independently configured scoped token is required for broadcasts.
+  app.use('/admin', apiKeyMiddleware);
   app.post('/admin/kill-switch', handleKillSwitch);
 
   // Server-sent Events broadcast endpoint (admin)
   app.post('/admin/broadcast', (req, res) => {
-    const { event, data } = req.body as { event: string; data: unknown };
+    const secret = process.env.MCP_ADMIN_BROADCAST_TOKEN;
+    if (!secret || secret.length < 32) {
+      res.status(503).json({ error: 'Admin broadcast not configured' });
+      return;
+    }
+    const submitted = req.get('x-admin-broadcast-token') || '';
+    const { timingSafeEqual } = require('node:crypto') as typeof import('node:crypto');
+    const a = Buffer.from(secret, 'utf8');
+    const b = Buffer.from(submitted, 'utf8');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      res.status(403).json({ error: 'Admin broadcast forbidden' });
+      return;
+    }
+    const body = req.body as { event?: unknown; data?: unknown } | undefined;
+    if (!body || !['operator_notice', 'session_health'].includes(String(body.event))) {
+      res.status(400).json({ error: 'Invalid broadcast event' });
+      return;
+    }
+    let encoded: string | undefined;
+    try { encoded = JSON.stringify(body.data); } catch { encoded = undefined; }
+    if (!encoded || Buffer.byteLength(encoded, 'utf8') > 2048) {
+      res.status(400).json({ error: 'Invalid broadcast payload' });
+      return;
+    }
     const { broadcastSSE } = require('./transport/sse');
-    broadcastSSE(event, data);
+    broadcastSSE(String(body.event), body.data);
     res.json({ success: true, clients: getConnectedClients() });
   });
 
