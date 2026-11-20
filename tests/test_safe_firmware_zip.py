@@ -71,6 +71,21 @@ class FirmwareZipTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Destination exists"):
             module.check_zip(self.zipfile, digest, self.out)
 
+    def test_symlinked_extraction_parent_rejected(self):
+        digest = self.make_zip([("firmware.bin", b"data")])
+        linked = self.root / "linked"
+        linked.symlink_to(self.root, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "Symlink in extraction"):
+            module.check_zip(self.zipfile, digest, linked / "new-extraction")
+        self.assertFalse((self.root / "new-extraction").exists())
+
+    def test_partial_extraction_cleans_up_after_member_collision(self):
+        # ZIP is byte-valid but cannot be mapped onto a safe filesystem tree.
+        digest = self.make_zip([("entry", b"regular-file"), ("entry/nested", b"not-a-directory")])
+        with self.assertRaises((OSError, ValueError)):
+            module.check_zip(self.zipfile, digest, self.out)
+        self.assertFalse(self.out.exists())
+
     def test_member_size_limit_rejected_before_creation(self):
         digest = self.make_zip([("big.bin", b"a" * 200)])
         old = module.MAX_MEMBER_BYTES
