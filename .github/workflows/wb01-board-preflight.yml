@@ -1,0 +1,28 @@
+name: WB01 board profile preflight
+on:
+  pull_request:
+    paths:
+      - 'wb01-firmware/scripts/**'
+      - 'wb01-firmware/tests/**'
+      - '.github/workflows/wb01-board-preflight.yml'
+  push:
+    branches:
+      - codex/create-custom-firmware-for-creality-box
+permissions:
+  contents: read
+jobs:
+  fail-closed-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build script syntax
+        run: bash -n wb01-firmware/scripts/build_wb01.sh
+      - name: Board profile regression suite
+        run: python3 -m unittest discover -s wb01-firmware/tests -p 'test_board_preflight.py' -v
+      - name: No generic build without hardware evidence
+        run: |
+          if bash wb01-firmware/scripts/build_wb01.sh; then
+            echo "Unexpected build without board evidence"
+            exit 1
+          fi
