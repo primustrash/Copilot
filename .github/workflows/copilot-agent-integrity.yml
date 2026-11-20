@@ -1,0 +1,25 @@
+name: Copilot agent integrity
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'AGENT_FILES.md5'
+      - '.gitignore'
+      - '.github/agents/**'
+      - 'tests/test_agent_integrity.py'
+      - '.github/workflows/copilot-agent-integrity.yml'
+  push:
+    branches:
+      - cursor/add-agents-md-499e
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate checksums
+        run: md5sum -c AGENT_FILES.md5
+      - name: Validate ignored secrets and agent frontmatter
+        run: python3 -m unittest discover -s tests -p 'test_agent_integrity.py' -v
