@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Build-only: no flashing and no generic target guesses.
 OPENWRT_VERSION="v23.05.5"
-TARGET="ramips"
-SUBTARGET="mt76x8"
-PROFILE="generic"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORK_DIR="${ROOT_DIR}/openwrt"
+
+if [[ $# -ne 1 ]]; then
+  printf '%s\n' "Usage: $0 <candidate-board-evidence.json>" >&2
+  printf '%s\n' "Refusing generic or unspecified WB01 target. This script never flashes firmware." >&2
+  exit 2
+fi
+# Validate the board candidate before any cloning, downloads or writes.
+PROFILE_LINE="$(python3 "${ROOT_DIR}/scripts/validate_board_profile.py" "$1")" || exit 2
+read -r TARGET SUBTARGET PROFILE <<< "$PROFILE_LINE"
+[[ -n "$TARGET" && -n "$SUBTARGET" && -n "$PROFILE" ]] || exit 2
+printf '%s\n' "CANDIDATE-ONLY build: $TARGET/$SUBTARGET/$PROFILE"
 
 if [[ ! -d "${WORK_DIR}" ]]; then
   git clone --branch "${OPENWRT_VERSION}" --depth 1 https://github.com/openwrt/openwrt.git "${WORK_DIR}"
