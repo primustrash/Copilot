@@ -47,11 +47,24 @@ const MAX_TIMEOUT_MS = 120000;
 
 function canonical(target: string): string {
   const absolute = path.resolve(target);
-  try { return fs.realpathSync(absolute); }
-  catch {
-    const parent = fs.realpathSync(path.dirname(absolute));
-    return path.join(parent, path.basename(absolute));
+  const unresolved: string[] = [];
+  let cursor = absolute;
+  // Resolve the nearest existing ancestor so a missing nested sibling
+  // cannot throw ENOENT before the configured root boundary is checked.
+  while (!fs.existsSync(cursor)) {
+    try {
+      if (fs.lstatSync(cursor).isSymbolicLink()) {
+        throw new Error('Broken symbolic links are not valid sandbox paths');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Broken symbolic')) throw error;
+    }
+    const parent = path.dirname(cursor);
+    if (parent === cursor) throw new Error('Cannot resolve sandbox path');
+    unresolved.unshift(path.basename(cursor));
+    cursor = parent;
   }
+  return path.join(fs.realpathSync(cursor), ...unresolved);
 }
 
 function insideRoot(target: string, root: string): boolean {
