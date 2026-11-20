@@ -1,0 +1,14 @@
+# Local MCP credentials must never enter Git history.
+.mcp/.env.local
+.mcp/mcp-config.local.json
+.mcp/*.secrets.json
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.token
+__pycache__/
+*.pyc
+node_modules/
